@@ -10,7 +10,7 @@
   <main class="app">
     <section class="header">
       <h1>NEXUS TILT BLE POC</h1>
-      <p>Plan a TILT test now, simulate BLE results, then Accept or Retest before the result becomes a record.</p>
+      <p>Build a TILT test plan, customize it for the equipment, then Accept or Retest each BLE result before it becomes a record.</p>
     </section>
 
     <div class="grid two">
@@ -24,11 +24,11 @@
           <label for="equipmentName">Equipment</label>
           <input id="equipmentName" placeholder="Example: XFMR-01">
         </div>
-        <div class="row" aria-label="Test scope">
-          <button class="scope-btn active" data-scope="FULL" type="button">FULL TEST</button>
-          <button class="scope-btn" data-scope="HALF" type="button">HALF TEST</button>
-          <button class="scope-btn" data-scope="CUSTOM" type="button">CUSTOM</button>
+        <div class="row">
+          <button id="loadStandard" class="primary" type="button">LOAD STANDARD CANNED TEST</button>
+          <span id="planType" class="pill">STANDARD</span>
         </div>
+        <p class="small muted">Start with the canned test, then remove, rename, or add any test points needed for this equipment.</p>
         <div id="planTests" class="test-list" style="margin-top:12px"></div>
         <div class="row" style="margin-top:12px">
           <button id="addTest" class="secondary" type="button">+ ADD TEST</button>
