@@ -1,99 +1,18 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#111111">
-  <title>NEXUS TILT BLE POC</title>
-  <link rel="stylesheet" href="css/tilt.css">
-</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#111111"><title>NEXUS TILT BLE POC</title><link rel="stylesheet" href="css/tilt.css"></head>
 <body>
-  <main class="app">
-    <section class="header">
-      <h1>NEXUS TILT BLE POC</h1>
-      <p>Build, run, accept, and retain TILT test records. Field testing is designed to continue without internet access.</p>
-    </section>
-
-    <section class="card" style="margin-bottom:16px">
-      <h2>Operating Mode</h2>
-      <div class="row" aria-label="Operating mode">
-        <button id="modeStandalone" class="primary" type="button">STANDALONE TEST</button>
-        <button id="modeNexus" class="secondary" type="button">NEXUS TEST</button>
-        <span id="modeStatus" class="pill">STANDALONE</span>
-      </div>
-      <p id="modeNote" class="small muted">Standalone mode runs and stores tests locally. Internet access is not required during testing. Future online services can synchronize retained records when connectivity returns.</p>
-      <div id="networkStatus" class="status">Checking connection...</div>
-    </section>
-
-    <section class="card" style="margin-bottom:16px">
-      <h2>Device Connection</h2>
-      <div id="bleStatus" class="status">TILT device not connected.</div>
-      <div class="row">
-        <button id="connectBle" class="primary" type="button">CONNECT TILT DEVICE</button>
-        <button id="disconnectBle" class="secondary" type="button" disabled>DISCONNECT</button>
-        <span id="bleDeviceName" class="pill">NO DEVICE</span>
-      </div>
-      <p id="bleSupportNote" class="small muted">BLE testing is independent of internet connectivity. The simulator remains available while the hardware is being built.</p>
-    </section>
-
-    <div class="grid two">
-      <section class="card">
-        <h2>1. Build Test Plan</h2>
-        <div class="field"><label for="planName">Plan name</label><input id="planName" value="Standard TILT Test"></div>
-        <div class="field"><label for="equipmentName">Equipment</label><input id="equipmentName" placeholder="Example: XFMR-01"></div>
-        <div class="row"><button id="loadStandard" class="primary" type="button">LOAD STANDARD CANNED TEST</button><span id="planType" class="pill">STANDARD</span></div>
-        <p class="small muted">Start with the canned test, then remove, rename, or add any test points needed for this equipment.</p>
-        <div id="planTests" class="test-list" style="margin-top:12px"></div>
-        <div class="row" style="margin-top:12px"><button id="addTest" class="secondary" type="button">+ ADD TEST</button><button id="savePlan" class="primary" type="button">SAVE TEST PLAN</button></div>
-      </section>
-
-      <section class="card">
-        <h2>2. Run Test</h2>
-        <div class="field"><label for="savedPlans">Saved plans</label><select id="savedPlans"></select></div>
-        <div class="field"><label for="technicianName">Technician</label><input id="technicianName" value="POC User"></div>
-        <button id="startTest" class="primary" type="button">START TEST</button>
-        <div id="runStatus" class="status" style="margin-top:12px">No test running.</div>
-        <div id="currentTest" class="result-big">—</div>
-        <div id="candidatePanel" hidden><div id="candidateResult" class="status"></div><div class="row"><button id="acceptResult" class="good" type="button">ACCEPT</button><button id="retestResult" class="bad" type="button">RETEST</button></div></div>
-        <div id="runList" class="test-list" style="margin-top:12px"></div>
-      </section>
-    </div>
-
-    <section class="card dev" style="margin-top:16px">
-      <h2>BLE Simulator</h2>
-      <p class="muted">These buttons stand in for the physical device until hardware testing begins.</p>
-      <div class="row"><button id="simOpen" class="warn" type="button">SIMULATE OPEN</button><button id="simShort" class="bad" type="button">SIMULATE SHORT</button><button id="simOk" class="good" type="button">SIMULATE TRANSFORMER OK</button><button id="simBad" class="secondary" type="button">SIMULATE BAD CADENCE</button></div>
-    </section>
-
-    <section class="card" style="margin-top:16px">
-      <h2>Completed Tests</h2>
-      <div id="completedStatus" class="status">No completed test in this session.</div>
-      <div id="completedTests"></div>
-    </section>
-  </main>
-
-  <script src="js/tilt_protocol.js"></script>
-  <script src="js/tilt_templates.js"></script>
-  <script src="js/tilt_store.js"></script>
-  <script src="js/tilt_engine.js"></script>
-  <script src="js/tilt_simulator.js"></script>
-  <script src="js/tilt_ble_bridge.js"></script>
-  <script src="js/tilt_record_adapter.js"></script>
-  <script src="js/app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(console.error));
-    }
-    const networkStatus = document.getElementById('networkStatus');
-    function renderNetworkStatus() {
-      if (!networkStatus) return;
-      networkStatus.textContent = navigator.onLine
-        ? 'ONLINE — field data remains stored locally; synchronization may occur when configured.'
-        : 'OFFLINE — testing remains available and records will stay safely stored on this device.';
-    }
-    window.addEventListener('online', renderNetworkStatus);
-    window.addEventListener('offline', renderNetworkStatus);
-    renderNetworkStatus();
-  </script>
-</body>
-</html>
+<main class="app">
+<section class="header"><h1>NEXUS TILT BLE POC</h1><p>Build, run, accept, and retain TILT test records. Field testing is designed to continue without internet access.</p></section>
+<section class="card" style="margin-bottom:16px"><h2>Operating Mode</h2><div class="row" aria-label="Operating mode"><button id="modeStandalone" class="primary" type="button">STANDALONE TEST</button><button id="modeNexus" class="secondary" type="button">NEXUS TEST</button><span id="modeStatus" class="pill">STANDALONE</span></div><p id="modeNote" class="small muted">Standalone mode runs and stores tests locally. Internet access is not required during testing.</p><div id="networkStatus" class="status">Checking connection...</div></section>
+<section class="card" style="margin-bottom:16px"><h2>Device Connection</h2><div id="bleStatus" class="status">TILT device not connected.</div><div class="row"><button id="connectBle" class="primary" type="button">CONNECT TILT DEVICE</button><button id="disconnectBle" class="secondary" type="button" disabled>DISCONNECT</button><span id="bleDeviceName" class="pill">NO DEVICE</span></div><p id="bleSupportNote" class="small muted">BLE testing is independent of internet connectivity. The simulator remains available while the hardware is being built.</p></section>
+<div class="grid two"><section class="card"><h2>1. Build Test Plan</h2><div class="field"><label for="planName">Plan name</label><input id="planName" value="Standard TILT Test"></div><div class="field"><label for="equipmentName">Equipment</label><input id="equipmentName" placeholder="Example: XFMR-01"></div><div class="row"><button id="loadStandard" class="primary" type="button">LOAD STANDARD CANNED TEST</button><span id="planType" class="pill">STANDARD</span></div><p class="small muted">Start with the canned test, then remove, rename, or add any test points needed for this equipment.</p><div id="planTests" class="test-list" style="margin-top:12px"></div><div class="row" style="margin-top:12px"><button id="addTest" class="secondary" type="button">+ ADD TEST</button><button id="savePlan" class="primary" type="button">SAVE TEST PLAN</button></div></section>
+<section class="card"><h2>2. Run Test</h2><div class="field"><label for="savedPlans">Saved plans</label><select id="savedPlans"></select></div><div class="field"><label for="technicianName">Technician</label><input id="technicianName" value="POC User"></div><button id="startTest" class="primary" type="button">START TEST</button><div id="runStatus" class="status" style="margin-top:12px">No test running.</div><div id="currentTest" class="result-big">—</div><div id="candidatePanel" hidden><div id="candidateResult" class="status"></div><div class="row"><button id="acceptResult" class="good" type="button">ACCEPT</button><button id="retestResult" class="bad" type="button">RETEST</button></div></div><div id="runList" class="test-list" style="margin-top:12px"></div></section></div>
+<section class="card dev" style="margin-top:16px"><h2>BLE Simulator</h2><p class="muted">These buttons stand in for the physical device until hardware testing begins.</p><div class="row"><button id="simOpen" class="warn" type="button">SIMULATE OPEN</button><button id="simShort" class="bad" type="button">SIMULATE SHORT</button><button id="simOk" class="good" type="button">SIMULATE TRANSFORMER OK</button><button id="simBad" class="secondary" type="button">SIMULATE BAD CADENCE</button></div></section>
+<section class="card" style="margin-top:16px"><h2>Completed Tests</h2><div id="completedStatus" class="status">No completed test in this session.</div><div id="completedTests"></div></section>
+</main>
+<script src="js/tilt_protocol.js"></script><script src="js/tilt_templates.js"></script><script src="js/tilt_store.js"></script><script src="js/tilt_db.js"></script><script src="js/tilt_sync.js"></script><script src="js/tilt_engine.js"></script><script src="js/tilt_simulator.js"></script><script src="js/tilt_ble_bridge.js"></script><script src="js/tilt_record_adapter.js"></script><script src="js/app.js"></script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(console.error));}
+const networkStatus=document.getElementById('networkStatus');function renderNetworkStatus(){networkStatus.textContent=navigator.onLine?'ONLINE — records are still saved locally first.':'OFFLINE — testing remains available; records stay safely stored on this device.';}window.addEventListener('online',renderNetworkStatus);window.addEventListener('offline',renderNetworkStatus);renderNetworkStatus();
+</script></body></html>
