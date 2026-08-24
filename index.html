@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NEXUS TILT BLE POC</title>
+  <link rel="stylesheet" href="css/tilt.css">
+</head>
+<body>
+  <main class="app">
+    <section class="header">
+      <h1>NEXUS TILT BLE POC</h1>
+      <p>Plan a TILT test now, simulate BLE results, then Accept or Retest before the result becomes a record.</p>
+    </section>
+
+    <div class="grid two">
+      <section class="card">
+        <h2>1. Build Test Plan</h2>
+        <div class="field">
+          <label for="planName">Plan name</label>
+          <input id="planName" value="Standard TILT Test">
+        </div>
+        <div class="field">
+          <label for="equipmentName">Equipment</label>
+          <input id="equipmentName" placeholder="Example: XFMR-01">
+        </div>
+        <div class="row" aria-label="Test scope">
+          <button class="scope-btn active" data-scope="FULL" type="button">FULL TEST</button>
+          <button class="scope-btn" data-scope="HALF" type="button">HALF TEST</button>
+          <button class="scope-btn" data-scope="CUSTOM" type="button">CUSTOM</button>
+        </div>
+        <div id="planTests" class="test-list" style="margin-top:12px"></div>
+        <div class="row" style="margin-top:12px">
+          <button id="addTest" class="secondary" type="button">+ ADD TEST</button>
+          <button id="savePlan" class="primary" type="button">SAVE PLAN IN POC</button>
+        </div>
+        <p class="small muted">POC storage is local to this browser. Firebase/NEXUS storage will replace this when integrated.</p>
+      </section>
+
+      <section class="card">
+        <h2>2. Run Test</h2>
+        <div class="field">
+          <label for="savedPlans">Saved plans</label>
+          <select id="savedPlans"></select>
+        </div>
+        <div class="field">
+          <label for="technicianName">Technician</label>
+          <input id="technicianName" value="POC User">
+        </div>
+        <button id="startTest" class="primary" type="button">START TEST</button>
+        <div id="runStatus" class="status" style="margin-top:12px">No test running.</div>
+        <div id="currentTest" class="result-big">—</div>
+        <div id="candidatePanel" hidden>
+          <div id="candidateResult" class="status"></div>
+          <div class="row">
+            <button id="acceptResult" class="good" type="button">ACCEPT</button>
+            <button id="retestResult" class="bad" type="button">RETEST</button>
+          </div>
+        </div>
+        <div id="runList" class="test-list" style="margin-top:12px"></div>
+      </section>
+    </div>
+
+    <section class="card dev" style="margin-top:16px">
+      <h2>BLE Simulator</h2>
+      <p class="muted">These buttons stand in for the physical ESP32 device until the hardware arrives.</p>
+      <div class="row">
+        <button id="simOpen" class="warn" type="button">SIMULATE OPEN</button>
+        <button id="simShort" class="bad" type="button">SIMULATE SHORT</button>
+        <button id="simOk" class="good" type="button">SIMULATE TRANSFORMER OK</button>
+        <button id="simBad" class="secondary" type="button">SIMULATE BAD CADENCE</button>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <h2>Accepted Records</h2>
+      <div id="records"></div>
+    </section>
+  </main>
+
+  <script src="js/tilt_protocol.js"></script>
+  <script src="js/tilt_templates.js"></script>
+  <script src="js/tilt_store.js"></script>
+  <script src="js/tilt_engine.js"></script>
+  <script src="js/tilt_simulator.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
