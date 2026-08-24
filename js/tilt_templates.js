@@ -20,15 +20,5 @@ window.NEXUSTiltTemplates = {
   cloneTests(templateId = 'STANDARD') {
     const template = this[templateId] || this.STANDARD;
     return template.tests.map((test, index) => ({ ...test, order: index + 1 }));
-  },
-
-  buildScope(scope = 'FULL', templateId = 'STANDARD') {
-    const tests = this.cloneTests(templateId);
-
-    if (scope === 'HALF') {
-      return tests.slice(0, Math.ceil(tests.length / 2));
-    }
-
-    return tests;
   }
 };
