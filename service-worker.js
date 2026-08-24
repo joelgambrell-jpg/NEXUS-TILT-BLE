@@ -1,9 +1,9 @@
-const CACHE_NAME = 'arc-tilt-poc-v9';
+const CACHE_NAME = 'arc-tilt-poc-v10';
 const APP_SHELL = [
   './',
   './index.html',
-  './css/tilt.css?v=9',
-  './assets/arc-corner-logo.jpg?v=9',
+  './css/tilt.css?v=10',
+  './assets/arc-corner-logo-fixed.jpg?v=10',
   './js/app.js',
   './js/tilt_protocol.js',
   './js/tilt_ble_bridge.js',
