@@ -10,7 +10,17 @@
   <main class="app">
     <section class="header">
       <h1>NEXUS TILT BLE POC</h1>
-      <p>Build a TILT test plan, customize it for the equipment, connect the BLE device, then Accept or Retest each result before it becomes a record.</p>
+      <p>Build a TILT test plan, connect the BLE device, run the test, then save the completed record either into NEXUS or as a standalone test.</p>
+    </section>
+
+    <section class="card" style="margin-bottom:16px">
+      <h2>Operating Mode</h2>
+      <div class="row" aria-label="Operating mode">
+        <button id="modeNexus" class="primary" type="button">NEXUS TEST</button>
+        <button id="modeStandalone" class="secondary" type="button">STANDALONE TEST</button>
+        <span id="modeStatus" class="pill">NEXUS</span>
+      </div>
+      <p id="modeNote" class="small muted">NEXUS mode returns the completed test to the NEXUS host for immediate storage and viewing. If sync is unavailable, the completed test is held locally until it can sync.</p>
     </section>
 
     <section class="card" style="margin-bottom:16px">
@@ -43,9 +53,8 @@
         <div id="planTests" class="test-list" style="margin-top:12px"></div>
         <div class="row" style="margin-top:12px">
           <button id="addTest" class="secondary" type="button">+ ADD TEST</button>
-          <button id="savePlan" class="primary" type="button">SAVE PLAN IN POC</button>
+          <button id="savePlan" class="primary" type="button">SAVE TEST PLAN</button>
         </div>
-        <p class="small muted">POC storage is local to this browser. Firebase/NEXUS storage will replace this when integrated.</p>
       </section>
 
       <section class="card">
@@ -74,7 +83,7 @@
 
     <section class="card dev" style="margin-top:16px">
       <h2>BLE Simulator</h2>
-      <p class="muted">These buttons stand in for the physical ESP32 device until the hardware arrives.</p>
+      <p class="muted">These buttons stand in for the physical device until hardware testing begins.</p>
       <div class="row">
         <button id="simOpen" class="warn" type="button">SIMULATE OPEN</button>
         <button id="simShort" class="bad" type="button">SIMULATE SHORT</button>
@@ -84,8 +93,9 @@
     </section>
 
     <section class="card" style="margin-top:16px">
-      <h2>Accepted Records</h2>
-      <div id="records"></div>
+      <h2>Completed Tests</h2>
+      <div id="completedStatus" class="status">No completed test in this session.</div>
+      <div id="completedTests"></div>
     </section>
   </main>
 
@@ -95,6 +105,7 @@
   <script src="js/tilt_engine.js"></script>
   <script src="js/tilt_simulator.js"></script>
   <script src="js/tilt_ble_bridge.js"></script>
+  <script src="js/tilt_record_adapter.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
