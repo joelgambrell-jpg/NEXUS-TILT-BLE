@@ -1,7 +1,7 @@
 (() => {
   const $ = id => document.getElementById(id);
-  let scope = 'FULL';
-  let draftTests = window.NEXUSTiltTemplates.buildScope(scope);
+  let planType = 'STANDARD';
+  let draftTests = window.NEXUSTiltTemplates.cloneTests('STANDARD');
 
   const engine = new window.NEXUSTiltEngine({
     onStateChange: renderRunState,
@@ -20,37 +20,44 @@
     return `PLAN-${Date.now()}`;
   }
 
-  function buildDraftForScope(nextScope) {
-    scope = nextScope;
-    document.querySelectorAll('.scope-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.scope === scope);
-    });
-    if (scope === 'FULL' || scope === 'HALF') {
-      draftTests = window.NEXUSTiltTemplates.buildScope(scope);
-    }
+  function markCustom() {
+    planType = 'CUSTOM';
+    $('planType').textContent = 'CUSTOM';
+  }
+
+  function loadStandard() {
+    planType = 'STANDARD';
+    draftTests = window.NEXUSTiltTemplates.cloneTests('STANDARD');
+    $('planType').textContent = 'STANDARD';
     renderDraftTests();
   }
 
   function renderDraftTests() {
     const wrap = $('planTests');
     wrap.innerHTML = '';
+
     draftTests.forEach((test, index) => {
       const row = document.createElement('div');
       row.className = 'test-row';
-      row.innerHTML = `<strong>${index + 1}</strong><input aria-label="Test ${index + 1}" value="${escapeHtml(test.label)}"><button type="button" class="secondary">REMOVE</button>`;
+      row.innerHTML = `<strong>${index + 1}</strong><div><span class="small muted">${escapeHtml(test.group || 'Custom')}</span><input aria-label="Test ${index + 1}" value="${escapeHtml(test.label)}"></div><button type="button" class="secondary">REMOVE</button>`;
+
       const input = row.querySelector('input');
       const remove = row.querySelector('button');
+
       input.addEventListener('input', () => {
         test.label = input.value.trim();
         test.from = '';
         test.to = '';
+        test.group = test.group || 'Custom';
+        markCustom();
       });
+
       remove.addEventListener('click', () => {
         draftTests.splice(index, 1);
-        scope = 'CUSTOM';
-        document.querySelectorAll('.scope-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.scope === 'CUSTOM'));
+        markCustom();
         renderDraftTests();
       });
+
       wrap.appendChild(row);
     });
   }
@@ -62,13 +69,16 @@
   function savePlan() {
     const equipmentName = $('equipmentName').value.trim();
     const name = $('planName').value.trim() || 'TILT Test Plan';
+
     const cleanTests = draftTests
       .map((t, i) => ({
         id: t.id || `T${i + 1}`,
+        group: t.group || 'Custom',
         label: (t.label || '').trim(),
         from: t.from || '',
         to: t.to || '',
-        expected: t.expected || 'TRANSFORMER_OK'
+        expected: t.expected || 'TRANSFORMER_OK',
+        order: i + 1
       }))
       .filter(t => t.label);
 
@@ -85,7 +95,7 @@
       projectId: '',
       equipmentId: '',
       templateId: 'STANDARD',
-      scope,
+      planType,
       createdAt: new Date().toISOString(),
       status: 'PLANNED',
       tests: cleanTests
@@ -100,6 +110,7 @@
     const plans = window.NEXUSTiltStore.listPlans();
     const select = $('savedPlans');
     select.innerHTML = '';
+
     if (!plans.length) {
       const option = document.createElement('option');
       option.value = '';
@@ -108,12 +119,14 @@
       $('startTest').disabled = true;
       return;
     }
+
     plans.forEach(plan => {
       const option = document.createElement('option');
       option.value = plan.planId;
-      option.textContent = `${plan.equipmentName ? plan.equipmentName + ' — ' : ''}${plan.name} (${plan.scope})`;
+      option.textContent = `${plan.equipmentName ? plan.equipmentName + ' — ' : ''}${plan.name} (${plan.tests.length} tests)`;
       select.appendChild(option);
     });
+
     $('startTest').disabled = false;
     if (selectId) select.value = selectId;
   }
@@ -167,6 +180,7 @@
     const wrap = $('runList');
     wrap.innerHTML = '';
     if (!state.plan) return;
+
     state.plan.tests.forEach((test, index) => {
       const accepted = state.accepted.find(r => r.testId === test.id);
       const row = document.createElement('div');
@@ -201,10 +215,12 @@
   function renderRecords() {
     const records = window.NEXUSTiltStore.listRecords();
     const wrap = $('records');
+
     if (!records.length) {
       wrap.innerHTML = '<p class="muted">No accepted test records yet.</p>';
       return;
     }
+
     wrap.innerHTML = '';
     records.slice(0, 50).forEach(record => {
       const div = document.createElement('div');
@@ -214,11 +230,10 @@
     });
   }
 
-  document.querySelectorAll('.scope-btn').forEach(btn => btn.addEventListener('click', () => buildDraftForScope(btn.dataset.scope)));
+  $('loadStandard').addEventListener('click', loadStandard);
   $('addTest').addEventListener('click', () => {
-    scope = 'CUSTOM';
-    document.querySelectorAll('.scope-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.scope === 'CUSTOM'));
-    draftTests.push({ id: `T${Date.now()}`, label: 'New test point', expected: 'TRANSFORMER_OK' });
+    markCustom();
+    draftTests.push({ id: `T${Date.now()}`, group: 'Custom', label: 'New test point', expected: 'TRANSFORMER_OK' });
     renderDraftTests();
   });
   $('savePlan').addEventListener('click', savePlan);
