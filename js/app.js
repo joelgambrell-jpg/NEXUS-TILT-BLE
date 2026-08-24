@@ -2,17 +2,36 @@
   const $ = id => document.getElementById(id);
   let planType = 'STANDARD';
   let draftTests = window.NEXUSTiltTemplates.cloneTests('STANDARD');
+  let operatingMode = 'NEXUS';
+  let currentRunStartedAt = '';
+
+  const recordAdapter = new window.NEXUSTiltRecordAdapter({
+    store: window.NEXUSTiltStore,
+    onStatus: renderCompletionStatus
+  });
+  recordAdapter.setMode(operatingMode);
 
   const engine = new window.NEXUSTiltEngine({
     onStateChange: renderRunState,
     onCandidate: renderCandidate,
     onAccepted: record => {
       window.NEXUSTiltStore.saveRecord(record);
-      renderRecords();
     },
-    onComplete: summary => {
+    onComplete: async summary => {
       $('runStatus').className = 'status good';
       $('runStatus').textContent = `TILT TEST COMPLETE — ${summary.records.length} accepted tests.`;
+
+      try {
+        await recordAdapter.finalize(summary, {
+          technicianName: $('technicianName').value.trim() || 'POC User',
+          startedAt: currentRunStartedAt
+        });
+      } catch (error) {
+        $('completedStatus').className = 'status bad';
+        $('completedStatus').textContent = error?.message || 'Completed test could not be finalized.';
+      }
+
+      renderCompletedTests();
     }
   });
 
@@ -28,6 +47,27 @@
 
   function makePlanId() {
     return `PLAN-${Date.now()}`;
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+  }
+
+  function setOperatingMode(mode) {
+    operatingMode = mode === 'STANDALONE' ? 'STANDALONE' : 'NEXUS';
+    recordAdapter.setMode(operatingMode);
+
+    $('modeNexus').className = operatingMode === 'NEXUS' ? 'primary' : 'secondary';
+    $('modeStandalone').className = operatingMode === 'STANDALONE' ? 'primary' : 'secondary';
+    $('modeStatus').textContent = operatingMode;
+
+    if (operatingMode === 'NEXUS') {
+      $('modeNote').textContent = 'NEXUS mode returns the completed test to the NEXUS host for immediate storage and viewing. If sync is unavailable, the completed test is held locally until it can sync.';
+    } else {
+      $('modeNote').textContent = 'Standalone mode keeps the completed test on this device and makes the completed record available for viewing and file export without requiring NEXUS.';
+    }
+
+    renderCompletedTests();
   }
 
   function markCustom() {
@@ -72,10 +112,6 @@
     });
   }
 
-  function escapeHtml(value) {
-    return String(value).replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
-  }
-
   function savePlan() {
     const equipmentName = $('equipmentName').value.trim();
     const name = $('planName').value.trim() || 'TILT Test Plan';
@@ -106,6 +142,7 @@
       equipmentId: '',
       templateId: 'STANDARD',
       planType,
+      operatingMode,
       createdAt: new Date().toISOString(),
       status: 'PLANNED',
       tests: cleanTests
@@ -113,7 +150,8 @@
 
     window.NEXUSTiltStore.savePlan(plan);
     refreshSavedPlans(plan.planId);
-    alert('TILT test plan saved in the POC.');
+    $('completedStatus').className = 'status good';
+    $('completedStatus').textContent = `Test plan saved with ${cleanTests.length} required points.`;
   }
 
   function refreshSavedPlans(selectId) {
@@ -144,6 +182,7 @@
   function startSelectedPlan() {
     const plan = window.NEXUSTiltStore.getPlan($('savedPlans').value);
     if (!plan) return;
+    currentRunStartedAt = new Date().toISOString();
     engine.loadPlan(plan);
     engine.start();
   }
@@ -221,36 +260,14 @@
     window.NEXUSTiltSimulator.emitBadCadence(evt => handleDeviceEvent(evt));
   }
 
-  function renderRecords() {
-    const records = window.NEXUSTiltStore.listRecords();
-    const wrap = $('records');
-
-    if (!records.length) {
-      wrap.innerHTML = '<p class="muted">No accepted test records yet.</p>';
-      return;
-    }
-
-    wrap.innerHTML = '';
-    records.slice(0, 50).forEach(record => {
-      const div = document.createElement('div');
-      div.className = 'record';
-      div.innerHTML = `<strong>${escapeHtml(record.equipmentName || 'Equipment not assigned')} — ${escapeHtml(record.testPoint)}</strong><br><span>${escapeHtml(record.observedIndication)} · ${escapeHtml(record.result)}</span><br><span class="small muted">Accepted ${new Date(record.acceptedAt).toLocaleString()} by ${escapeHtml(record.technicianName)} · Device ${escapeHtml(record.deviceId)}</span>`;
-      wrap.appendChild(div);
-    });
-  }
-
   function renderBleStatus(info) {
     const status = $('bleStatus');
     const deviceName = $('bleDeviceName');
     const connected = info.state === 'CONNECTED';
 
-    if (info.state === 'CONNECTING') {
-      status.className = 'status warn';
-    } else if (connected) {
-      status.className = 'status good';
-    } else {
-      status.className = 'status';
-    }
+    if (info.state === 'CONNECTING') status.className = 'status warn';
+    else if (connected) status.className = 'status good';
+    else status.className = 'status';
 
     status.textContent = info.message || 'TILT device not connected.';
     deviceName.textContent = connected ? (info.deviceName || 'TILT DEVICE') : 'NO DEVICE';
@@ -269,6 +286,51 @@
     }
   }
 
+  function renderCompletionStatus(info) {
+    const box = $('completedStatus');
+    if (info.state === 'DELIVERED') box.className = 'status good';
+    else if (info.state === 'LOCAL') box.className = 'status good';
+    else if (info.state === 'PENDING') box.className = 'status warn';
+    else box.className = 'status';
+    box.textContent = info.message || 'Completed test saved.';
+  }
+
+  function renderCompletedTests() {
+    const wrap = $('completedTests');
+    const tests = window.NEXUSTiltStore.listCompletedTests();
+    wrap.innerHTML = '';
+
+    if (!tests.length) {
+      wrap.innerHTML = '<p class="muted">No completed TILT tests saved yet.</p>';
+      return;
+    }
+
+    tests.slice(0, 25).forEach(test => {
+      const div = document.createElement('div');
+      div.className = 'record';
+
+      const syncText = test.mode === 'NEXUS'
+        ? (test.sync?.state || 'PENDING')
+        : 'STANDALONE';
+
+      div.innerHTML = `<strong>${escapeHtml(test.equipmentName || test.planName)} — ${escapeHtml(test.result)}</strong><br><span>${test.acceptedTestCount} of ${test.requiredTestCount} tests accepted · ${new Date(test.completedAt).toLocaleString()}</span><br><span class="small muted">Mode: ${escapeHtml(test.mode)} · Record: ${escapeHtml(test.completedTestId)} · ${escapeHtml(syncText)}</span>`;
+
+      if (test.mode === 'STANDALONE') {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'secondary';
+        button.textContent = 'SAVE TEST FILE';
+        button.style.marginTop = '8px';
+        button.addEventListener('click', () => recordAdapter.exportStandalone(test.completedTestId));
+        div.appendChild(button);
+      }
+
+      wrap.appendChild(div);
+    });
+  }
+
+  $('modeNexus').addEventListener('click', () => setOperatingMode('NEXUS'));
+  $('modeStandalone').addEventListener('click', () => setOperatingMode('STANDALONE'));
   $('loadStandard').addEventListener('click', loadStandard);
   $('addTest').addEventListener('click', () => {
     markCustom();
@@ -288,11 +350,12 @@
 
   if (!ble.supported) {
     $('connectBle').disabled = true;
-    $('bleSupportNote').textContent = 'This browser does not support direct Web Bluetooth. The simulator can still be used for development.';
+    $('bleSupportNote').textContent = 'This browser does not support direct Web Bluetooth. The simulator can still be used for development; iPad deployment will use the native BLE bridge.';
   }
 
+  setOperatingMode('NEXUS');
   renderDraftTests();
   refreshSavedPlans();
-  renderRecords();
+  renderCompletedTests();
   renderBleStatus({ state: 'DISCONNECTED', message: 'TILT device not connected.' });
 })();
