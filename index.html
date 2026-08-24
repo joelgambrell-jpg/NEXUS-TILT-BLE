@@ -10,7 +10,18 @@
   <main class="app">
     <section class="header">
       <h1>NEXUS TILT BLE POC</h1>
-      <p>Build a TILT test plan, customize it for the equipment, then Accept or Retest each BLE result before it becomes a record.</p>
+      <p>Build a TILT test plan, customize it for the equipment, connect the BLE device, then Accept or Retest each result before it becomes a record.</p>
+    </section>
+
+    <section class="card" style="margin-bottom:16px">
+      <h2>Device Connection</h2>
+      <div id="bleStatus" class="status">TILT device not connected.</div>
+      <div class="row">
+        <button id="connectBle" class="primary" type="button">CONNECT TILT DEVICE</button>
+        <button id="disconnectBle" class="secondary" type="button" disabled>DISCONNECT</button>
+        <span id="bleDeviceName" class="pill">NO DEVICE</span>
+      </div>
+      <p id="bleSupportNote" class="small muted">The simulator remains available while the hardware is being built.</p>
     </section>
 
     <div class="grid two">
@@ -83,6 +94,7 @@
   <script src="js/tilt_store.js"></script>
   <script src="js/tilt_engine.js"></script>
   <script src="js/tilt_simulator.js"></script>
+  <script src="js/tilt_ble_bridge.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
