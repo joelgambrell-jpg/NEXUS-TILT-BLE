@@ -16,6 +16,16 @@
     }
   });
 
+  const ble = new window.NEXUSTiltBLEBridge({
+    onEvent: evt => handleDeviceEvent(evt),
+    onStatus: info => renderBleStatus(info),
+    onError: error => {
+      const box = $('bleStatus');
+      box.className = 'status bad';
+      box.textContent = error?.message || 'BLE connection error.';
+    }
+  });
+
   function makePlanId() {
     return `PLAN-${Date.now()}`;
   }
@@ -192,24 +202,23 @@
     });
   }
 
+  function handleDeviceEvent(evt) {
+    const result = engine.receiveDeviceEvent(evt);
+    if (!result.accepted && result.reason === 'NOT_WAITING') {
+      $('runStatus').className = 'status warn';
+      $('runStatus').textContent = 'Start a test or resolve the current Accept/Retest decision first.';
+    } else if (!result.accepted && result.reason === 'INVALID_EVENT') {
+      $('runStatus').className = 'status warn';
+      $('runStatus').textContent = 'Rejected: event did not contain a valid TILT cadence.';
+    }
+  }
+
   function emitSim(channel) {
-    window.NEXUSTiltSimulator.emit(channel, evt => {
-      const result = engine.receiveDeviceEvent(evt);
-      if (!result.accepted && result.reason === 'NOT_WAITING') {
-        $('runStatus').className = 'status warn';
-        $('runStatus').textContent = 'Start a test or resolve the current Accept/Retest decision first.';
-      }
-    });
+    window.NEXUSTiltSimulator.emit(channel, evt => handleDeviceEvent(evt));
   }
 
   function emitBadCadence() {
-    window.NEXUSTiltSimulator.emitBadCadence(evt => {
-      const result = engine.receiveDeviceEvent(evt);
-      if (!result.accepted && result.reason === 'INVALID_EVENT') {
-        $('runStatus').className = 'status warn';
-        $('runStatus').textContent = 'Rejected: light event did not contain a valid TILT cadence.';
-      }
-    });
+    window.NEXUSTiltSimulator.emitBadCadence(evt => handleDeviceEvent(evt));
   }
 
   function renderRecords() {
@@ -230,6 +239,36 @@
     });
   }
 
+  function renderBleStatus(info) {
+    const status = $('bleStatus');
+    const deviceName = $('bleDeviceName');
+    const connected = info.state === 'CONNECTED';
+
+    if (info.state === 'CONNECTING') {
+      status.className = 'status warn';
+    } else if (connected) {
+      status.className = 'status good';
+    } else {
+      status.className = 'status';
+    }
+
+    status.textContent = info.message || 'TILT device not connected.';
+    deviceName.textContent = connected ? (info.deviceName || 'TILT DEVICE') : 'NO DEVICE';
+    $('connectBle').disabled = connected || !ble.supported;
+    $('disconnectBle').disabled = !connected;
+  }
+
+  async function connectBle() {
+    try {
+      await ble.connect();
+    } catch (error) {
+      if (error?.name === 'NotFoundError') {
+        $('bleStatus').className = 'status';
+        $('bleStatus').textContent = 'Device selection canceled.';
+      }
+    }
+  }
+
   $('loadStandard').addEventListener('click', loadStandard);
   $('addTest').addEventListener('click', () => {
     markCustom();
@@ -244,8 +283,16 @@
   $('simShort').addEventListener('click', () => emitSim(window.NEXUSTiltProtocol.CHANNELS.SHORT));
   $('simOk').addEventListener('click', () => emitSim(window.NEXUSTiltProtocol.CHANNELS.OK));
   $('simBad').addEventListener('click', emitBadCadence);
+  $('connectBle').addEventListener('click', connectBle);
+  $('disconnectBle').addEventListener('click', () => ble.disconnect());
+
+  if (!ble.supported) {
+    $('connectBle').disabled = true;
+    $('bleSupportNote').textContent = 'This browser does not support direct Web Bluetooth. The simulator can still be used for development.';
+  }
 
   renderDraftTests();
   refreshSavedPlans();
   renderRecords();
+  renderBleStatus({ state: 'DISCONNECTED', message: 'TILT device not connected.' });
 })();
