@@ -5,12 +5,22 @@ Proof-of-concept infrastructure for a BLE add-on that observes a TILT tester's O
 ## Current POC scope
 
 - Build and save a planned TILT test before field execution.
-- Support Full, Half, and Custom test scopes.
+- Start from the standard canned 10-point field test.
+- Customize any plan by removing, renaming, or adding test points.
 - Run one test point at a time.
 - Simulate BLE OPEN / SHORT / OK events while hardware is being built.
 - Require technician Accept or Retest before a detected result becomes an official record.
 - Save accepted records with date/time, planned test context, observed indication, and simulated device metadata.
 - Keep planned tests and completed records separate.
+
+## Standard canned test
+
+- Phase to Phase: A-B, A-C, B-C
+- Phase to Ground: A-G, B-G, C-G
+- Phase to Neutral: A-N, B-N, C-N
+- Neutral to Ground: N-G
+
+There is no fixed Half Test mode. A shorter or different test is created by customizing the canned plan to match the equipment being tested.
 
 ## Architecture
 
