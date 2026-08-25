@@ -1,4 +1,4 @@
-/* ARC runtime recovery/controller v26 */
+/* ARC runtime recovery/controller v32 */
 (()=>{
   const $=id=>document.getElementById(id);
   const set=(id,text,cls)=>{const el=$(id);if(!el)return;if(cls)el.className=cls;el.textContent=text};
@@ -37,7 +37,7 @@
     set('currentTest',s.currentTest?.label||(s.status==='COMPLETE'?'COMPLETE':'—'),'result-big');
     if(s.status==='WAITING')set('runStatus','TEST OPEN — perform the displayed test point.','status good');
     else if(s.status==='REVIEW')set('runStatus','Reading detected — ACCEPT or REJECT / RETEST.','status info');
-    else if(s.status==='COMPLETE')set('runStatus','TEST COMPLETE.','status good');
+    else if(s.status==='COMPLETE')set('runStatus','TEST COMPLETE — choose how to save or send this test.','status good');
     const cp=$('candidatePanel');if(cp)cp.hidden=s.status!=='REVIEW';
     const p=$('pauseTest');if(p)p.disabled=!['WAITING','REVIEW'].includes(s.status);
     const r=$('resumeTest');if(r)r.disabled=s.status!=='PAUSED';
@@ -57,6 +57,7 @@
         if(!p.tests.length)missing.push('Test Plan');
         if(p.calibrationVerification.method==='NONE')missing.push('Calibration Verification');
         if(missing.length){set('runStatus','Missing: '+missing.join(', '),'status warn');return;}
+        const panel=$('completionActions');if(panel)panel.hidden=true;
         engine.loadPlan(p);engine.start();render({status:engine.status,plan:engine.plan,currentIndex:engine.currentIndex,currentTest:engine.currentTest});
       }catch(err){set('runStatus','OPEN TEST ERROR: '+(err?.message||String(err)),'status bad');console.error(err)}
     };
@@ -83,12 +84,46 @@
     };
   }
 
+  function installCompletionUI(){
+    if($('completionActions'))return loadCompletionController();
+    const runCard=document.querySelector('.run-card');
+    if(!runCard)return;
+    const panel=document.createElement('div');
+    panel.id='completionActions';
+    panel.className='end-panel';
+    panel.hidden=true;
+    panel.innerHTML=`
+      <div class="section-title-row"><h2>SAVE COMPLETED TEST</h2><span class="pill accent">COMPLETE</span></div>
+      <p class="muted">Choose what to do with this completed ARC test.</p>
+      <div class="field"><label>Email Recipient (optional)</label><input id="completionEmail" type="email" placeholder="name@company.com"></div>
+      <div class="row">
+        <button id="saveCompletedLocal" class="good">SAVE LOCALLY</button>
+        <button id="emailCompletedTest" class="secondary">EMAIL TEST</button>
+        <button id="saveAndEmailCompleted" class="primary">SAVE LOCALLY + EMAIL</button>
+      </div>
+      <div id="completionActionStatus" class="status">Complete the test to enable save options.</div>`;
+    const endPanel=$('endTestPanel');
+    if(endPanel?.parentNode)endPanel.parentNode.insertBefore(panel,endPanel.nextSibling);
+    else runCard.appendChild(panel);
+    loadCompletionController();
+  }
+
+  function loadCompletionController(){
+    if(window.ARC_COMPLETION_ACTIONS_LOADING)return;
+    window.ARC_COMPLETION_ACTIONS_LOADING=true;
+    const s=document.createElement('script');
+    s.src='js/arc_completion_actions.js?v=32';
+    s.onload=()=>{window.ARC_COMPLETION_ACTIONS_LOADED=true};
+    s.onerror=()=>set('runStatus','ARC completion controls failed to load.','status bad');
+    document.body.appendChild(s);
+  }
+
   try{
-    bindStart();bindSimulation();bindBle();
-    window.ARC_RUNTIME_V26={ok:true,engine};
-    bootMessage(`ARC UI READY v26 · ${window.isSecureContext?'HTTPS OK':'NOT SECURE'}`,'good');
+    bindStart();bindSimulation();bindBle();installCompletionUI();
+    window.ARC_RUNTIME_V26={ok:true,engine,version:32};
+    bootMessage(`ARC UI READY v32 · ${window.isSecureContext?'HTTPS OK':'NOT SECURE'}`,'good');
   }catch(err){
-    window.ARC_RUNTIME_V26={ok:false,error:String(err)};
+    window.ARC_RUNTIME_V26={ok:false,error:String(err),version:32};
     bootMessage('ARC STARTUP ERROR: '+(err?.message||String(err)),'bad');
   }
 })();
