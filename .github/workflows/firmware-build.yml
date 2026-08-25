@@ -1,0 +1,32 @@
+name: ARC Firmware Build
+
+on:
+  push:
+    paths:
+      - 'firmware/**'
+      - '.github/workflows/firmware-build.yml'
+  pull_request:
+    paths:
+      - 'firmware/**'
+      - '.github/workflows/firmware-build.yml'
+
+jobs:
+  platformio-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firmware
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Compile XIAO ESP32-C3 firmware
+        run: pio run
