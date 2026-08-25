@@ -1,14 +1,1 @@
-window.NEXUSTiltSimulator = {
-  emit(channel, callback) {
-    const evt = window.NEXUSTiltProtocol.createSimulatedEvent(channel);
-    callback(evt);
-    return evt;
-  },
-  emitBadCadence(callback) {
-    const evt = window.NEXUSTiltProtocol.createSimulatedEvent(window.NEXUSTiltProtocol.CHANNELS.OK);
-    evt.cadenceValid = false;
-    evt.signalConfidence = 0.35;
-    callback(evt);
-    return evt;
-  }
-};
+window.NEXUSTiltSimulator={emit(channel,callback){const e=window.NEXUSTiltProtocol.createSimulatedEvent(channel);window.ARCDeviceDiagnostics?.event(e);callback(e);return e},emitBadCadence(callback){const e=window.NEXUSTiltProtocol.createSimulatedEvent(window.NEXUSTiltProtocol.CHANNELS.OK);e.cadenceValid=false;e.signalConfidence=.35;window.ARCDeviceDiagnostics?.event(e);callback(e);return e}};
