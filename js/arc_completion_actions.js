@@ -1,4 +1,4 @@
-/* ARC main-page completion actions v33 */
+/* ARC main-page completion actions v34 */
 (()=>{
   'use strict';
   const $=id=>document.getElementById(id);
@@ -12,27 +12,42 @@
 
   function ensurePanel(){
     let panel=$('completionActions');
-    if(panel)return panel;
-    const runCard=document.querySelector('.run-card');
-    if(!runCard)return null;
-    panel=document.createElement('div');
-    panel.id='completionActions';
-    panel.className='end-panel';
-    panel.hidden=true;
-    panel.innerHTML=`
-      <div class="section-title-row"><h3>SAVE COMPLETED TEST</h3><span class="pill accent">COMPLETE</span></div>
-      <p class="muted">Choose where this completed test should go.</p>
-      <div class="field"><label>Email Recipient (optional)</label><input id="completionEmail" type="email" placeholder="name@example.com"></div>
-      <div class="row">
-        <button id="saveCompletedLocal" class="good">SAVE LOCALLY</button>
-        <button id="emailCompletedTest" class="secondary">EMAIL TEST</button>
-        <button id="saveAndEmailCompleted" class="primary">SAVE LOCALLY + EMAIL</button>
-      </div>
-      <div id="completionActionStatus" class="status info">Complete the test to enable save options.</div>`;
-    const runList=$('runList');
-    if(runList)runCard.insertBefore(panel,runList);
-    else runCard.appendChild(panel);
+    if(!panel){
+      panel=document.createElement('div');
+      panel.id='completionActions';
+      panel.innerHTML=`
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px"><h2 style="margin:0">SAVE COMPLETED TEST</h2><span class="pill accent">COMPLETE</span></div>
+        <p class="muted">Choose where this completed test should go.</p>
+        <div class="field"><label>Email Recipient (optional)</label><input id="completionEmail" type="email" placeholder="name@company.com"></div>
+        <div class="row">
+          <button id="saveCompletedLocal" class="good">SAVE LOCALLY</button>
+          <button id="emailCompletedTest" class="secondary">EMAIL TEST</button>
+          <button id="saveAndEmailCompleted" class="primary">SAVE LOCALLY + EMAIL</button>
+        </div>
+        <div id="completionActionStatus" class="status info">Choose how to finish this test.</div>`;
+      document.body.appendChild(panel);
+    }
+    panel.style.position='fixed';
+    panel.style.left='50%';
+    panel.style.top='50%';
+    panel.style.transform='translate(-50%,-50%)';
+    panel.style.width='min(720px,calc(100vw - 32px))';
+    panel.style.maxHeight='calc(100vh - 32px)';
+    panel.style.overflow='auto';
+    panel.style.zIndex='10001';
+    panel.style.padding='24px';
+    panel.style.border='2px solid #d7131a';
+    panel.style.borderRadius='14px';
+    panel.style.background='linear-gradient(180deg,#17191c,#090a0b)';
+    panel.style.boxShadow='0 24px 80px rgba(0,0,0,.8)';
     return panel;
+  }
+
+  function ensureBackdrop(){
+    let b=$('completionBackdrop');
+    if(!b){b=document.createElement('div');b.id='completionBackdrop';document.body.appendChild(b)}
+    b.style.position='fixed';b.style.inset='0';b.style.zIndex='10000';b.style.background='rgba(0,0,0,.72)';b.style.backdropFilter='blur(2px)';
+    return b;
   }
 
   function setStatus(text,kind='info'){
@@ -43,120 +58,53 @@
   }
 
   function showPanel(){
-    const panel=ensurePanel();
-    if(panel){
-      panel.hidden=false;
-      setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'center'}),50);
-    }
+    const back=ensureBackdrop(),panel=ensurePanel();
+    back.hidden=false;panel.hidden=false;
     const rs=$('runStatus');
-    if(rs){
-      rs.className='status good';
-      rs.textContent='TEST COMPLETE — choose how to save or send this test.';
-    }
+    if(rs){rs.className='status good';rs.textContent='TEST COMPLETE — choose how to save or send this test.'}
     setStatus('Choose SAVE LOCALLY, EMAIL TEST, or SAVE LOCALLY + EMAIL.','info');
   }
 
   function hidePanel(){
-    const panel=$('completionActions');
-    if(panel)panel.hidden=true;
+    const panel=$('completionActions'),back=$('completionBackdrop');
+    if(panel)panel.hidden=true;if(back)back.hidden=true;
   }
 
   function latestCompletedForRun(runId){
     try{return window.NEXUSTiltStore?.listCompletedTests?.().find(x=>x.runId===runId)||null}catch{return null}
   }
-
-  function emailSubject(s){
-    const p=s?.plan||{};
-    return `ARC TILT Test — ${p.equipmentId||p.equipmentName||'Equipment'} — ${p.projectName||'Project'}`;
-  }
-
+  function emailSubject(s){const p=s?.plan||{};return `ARC TILT Test — ${p.equipmentId||p.equipmentName||'Equipment'} — ${p.projectName||'Project'}`}
   function emailBody(s){
-    const p=s?.plan||{}, end=s?.testEnd||{}, records=s?.records||[];
+    const p=s?.plan||{},end=s?.testEnd||{},records=s?.records||[];
     const rows=records.map((r,i)=>`${i+1}. ${r.testPoint||r.testId||'Test Point'}: ${r.reading||'—'}`).join('\n');
-    return [
-      'ARC Systems Completed TILT Test','',
-      `Project: ${p.projectName||''}`,
-      `Equipment ID: ${p.equipmentId||p.equipmentName||''}`,
-      `Equipment Type: ${p.equipmentType||''}`,
-      `Tester: ${$('technicianName')?.value.trim()||end.endedBy||''}`,
-      `Started: ${s?.startedAt?new Date(s.startedAt).toLocaleString():''}`,
-      `Completed: ${s?.completedAt?new Date(s.completedAt).toLocaleString():new Date().toLocaleString()}`,
-      `Status: ${end.endedByTester?'ENDED':'COMPLETED'}`,'',
-      'Accepted Readings:',rows||'No accepted readings recorded.','',
-      'Generated by ARC Systems'
-    ].join('\n');
+    return ['ARC Systems Completed TILT Test','',`Project: ${p.projectName||''}`,`Equipment ID: ${p.equipmentId||p.equipmentName||''}`,`Equipment Type: ${p.equipmentType||''}`,`Tester: ${$('technicianName')?.value.trim()||end.endedBy||''}`,`Started: ${s?.startedAt?new Date(s.startedAt).toLocaleString():''}`,`Completed: ${s?.completedAt?new Date(s.completedAt).toLocaleString():new Date().toLocaleString()}`,`Status: ${end.endedByTester?'ENDED':'COMPLETED'}`,'','Accepted Readings:',rows||'No accepted readings recorded.','','Generated by ARC Systems'].join('\n');
   }
-
-  function openEmail(s){
-    const to=$('completionEmail')?.value.trim()||'';
-    const href=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(emailSubject(s))}&body=${encodeURIComponent(emailBody(s))}`;
-    window.location.href=href;
-  }
-
+  function openEmail(s){const to=$('completionEmail')?.value.trim()||'';window.location.href=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(emailSubject(s))}&body=${encodeURIComponent(emailBody(s))}`}
   async function saveLocal(){
     if(!pending)throw new Error('No completed ARC test is waiting to be saved.');
-    const existing=latestCompletedForRun(pending.runId);
-    if(existing)return existing;
+    const existing=latestCompletedForRun(pending.runId);if(existing)return existing;
     await originalComplete(pending);
-    const saved=latestCompletedForRun(pending.runId);
-    if(!saved)throw new Error('ARC could not verify the completed test in local storage.');
-    return saved;
+    const saved=latestCompletedForRun(pending.runId);if(!saved)throw new Error('ARC could not verify the completed test in local storage.');return saved;
   }
+  async function finishEmailOnly(){if(!pending)return;try{await window.NEXUSTiltDB?.removeRun?.(pending.runId)}catch(e){console.error(e)}window.dispatchEvent(new Event('arc-records-changed'))}
 
-  async function finishEmailOnly(){
-    if(!pending)return;
-    try{await window.NEXUSTiltDB?.removeRun?.(pending.runId)}catch(e){console.error(e)}
-    window.dispatchEvent(new Event('arc-records-changed'));
-  }
+  const panel=ensurePanel();
+  const back=ensureBackdrop();
+  panel.hidden=true;back.hidden=true;
 
-  ensurePanel();
-
-  engine.onComplete=(s)=>{
-    pending=structuredClone(s);
-    handled=false;
-    showPanel();
-    return s;
-  };
+  engine.onComplete=(s)=>{pending=structuredClone(s);handled=false;showPanel();return s};
 
   $('saveCompletedLocal')?.addEventListener('click',async()=>{
     if(handled)return;
-    try{
-      setStatus('Saving completed test locally...','info');
-      await saveLocal();
-      handled=true;
-      setStatus('TEST SAVED LOCALLY — available under Completed Test Records.','good');
-      const rs=$('runStatus');if(rs)rs.textContent='TEST COMPLETE — SAVED LOCALLY.';
-      window.dispatchEvent(new Event('arc-records-changed'));
-    }catch(e){setStatus(`SAVE ERROR: ${e?.message||e}`,'bad')}
+    try{setStatus('Saving completed test locally...','info');await saveLocal();handled=true;setStatus('TEST SAVED LOCALLY — available under Completed Test Records.','good');const rs=$('runStatus');if(rs)rs.textContent='TEST COMPLETE — SAVED LOCALLY.';window.dispatchEvent(new Event('arc-records-changed'));setTimeout(hidePanel,700)}catch(e){setStatus(`SAVE ERROR: ${e?.message||e}`,'bad')}
   });
-
   $('emailCompletedTest')?.addEventListener('click',async()=>{
-    if(handled)return;
-    if(!pending)return setStatus('No completed test is waiting to be emailed.','bad');
-    try{
-      const snapshot=structuredClone(pending);
-      await finishEmailOnly();
-      handled=true;
-      setStatus('Opening your email app with the completed test.','good');
-      const rs=$('runStatus');if(rs)rs.textContent='TEST COMPLETE — EMAIL PREPARED.';
-      openEmail(snapshot);
-    }catch(e){setStatus(`EMAIL ERROR: ${e?.message||e}`,'bad')}
+    if(handled)return;if(!pending)return setStatus('No completed test is waiting to be emailed.','bad');
+    try{const snapshot=structuredClone(pending);await finishEmailOnly();handled=true;setStatus('Opening your email app with the completed test.','good');const rs=$('runStatus');if(rs)rs.textContent='TEST COMPLETE — EMAIL PREPARED.';openEmail(snapshot)}catch(e){setStatus(`EMAIL ERROR: ${e?.message||e}`,'bad')}
   });
-
   $('saveAndEmailCompleted')?.addEventListener('click',async()=>{
-    if(handled)return;
-    if(!pending)return setStatus('No completed test is waiting to be saved.','bad');
-    try{
-      const snapshot=structuredClone(pending);
-      setStatus('Saving locally, then opening email...','info');
-      await saveLocal();
-      handled=true;
-      window.dispatchEvent(new Event('arc-records-changed'));
-      setStatus('TEST SAVED LOCALLY — opening your email app.','good');
-      const rs=$('runStatus');if(rs)rs.textContent='TEST COMPLETE — SAVED LOCALLY + EMAIL PREPARED.';
-      openEmail(snapshot);
-    }catch(e){setStatus(`SAVE / EMAIL ERROR: ${e?.message||e}`,'bad')}
+    if(handled)return;if(!pending)return setStatus('No completed test is waiting to be saved.','bad');
+    try{const snapshot=structuredClone(pending);setStatus('Saving locally, then opening email...','info');await saveLocal();handled=true;window.dispatchEvent(new Event('arc-records-changed'));setStatus('TEST SAVED LOCALLY — opening your email app.','good');const rs=$('runStatus');if(rs)rs.textContent='TEST COMPLETE — SAVED LOCALLY + EMAIL PREPARED.';openEmail(snapshot)}catch(e){setStatus(`SAVE / EMAIL ERROR: ${e?.message||e}`,'bad')}
   });
-
   addEventListener('arc-resume-run',()=>{pending=null;handled=false;hidePanel()});
 })();
