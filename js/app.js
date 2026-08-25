@@ -1,183 +1,34 @@
 (() => {
   const $ = id => document.getElementById(id);
-  let planType = 'STANDARD';
-  let draftTests = window.NEXUSTiltTemplates.cloneTests('STANDARD');
-  let operatingMode = 'STANDALONE';
-  let currentRunStartedAt = '';
-
-  const recordAdapter = new window.NEXUSTiltRecordAdapter({
-    store: window.NEXUSTiltStore,
-    onStatus: renderCompletionStatus
-  });
-  recordAdapter.setMode(operatingMode);
-
-  const engine = new window.NEXUSTiltEngine({
-    onStateChange: state => {
-      renderRunState(state);
-      if (state.runId && state.plan && state.status !== 'COMPLETE' && window.NEXUSTiltDB) {
-        window.NEXUSTiltDB.saveRun(engine.snapshot()).catch(console.error);
-      }
-    },
-    onCandidate: renderCandidate,
-    onAccepted: record => {
-      window.NEXUSTiltStore.saveRecord(record);
-      if (window.NEXUSTiltDB) window.NEXUSTiltDB.saveRecord(record).catch(console.error);
-    },
-    onComplete: async summary => {
-      $('runStatus').className = 'status good';
-      $('runStatus').textContent = summary.testEnd?.endedByTester
-        ? `TEST ENDED BY TESTER — ${summary.records.length} accepted reading${summary.records.length === 1 ? '' : 's'} recorded.`
-        : `TEST SEQUENCE COMPLETE — ${summary.records.length} accepted reading${summary.records.length === 1 ? '' : 's'} recorded.`;
-
-      try {
-        await recordAdapter.finalize(summary, {
-          technicianName: $('technicianName').value.trim() || 'POC User',
-          startedAt: currentRunStartedAt
-        });
-        if (window.NEXUSTiltDB && summary.runId) await window.NEXUSTiltDB.removeRun(summary.runId);
-      } catch (error) {
-        $('completedStatus').className = 'status bad';
-        $('completedStatus').textContent = error?.message || 'ARC test record could not be finalized.';
-      }
-
-      $('endTestPanel').hidden = true;
-      $('endTest').disabled = true;
-      renderCompletedTests();
-    }
-  });
-
-  const ble = new window.NEXUSTiltBLEBridge({
-    onEvent: handleDeviceEvent,
-    onStatus: renderBleStatus,
-    onError: error => {
-      $('bleStatus').className = 'status bad';
-      $('bleStatus').textContent = error?.message || 'BLE connection error.';
-    }
-  });
-
-  function makePlanId() { return `PLAN-${Date.now()}`; }
-  function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch])); }
-
-  function setOperatingMode(mode) {
-    operatingMode = mode === 'NEXUS' ? 'NEXUS' : 'STANDALONE';
-    recordAdapter.setMode(operatingMode);
-    $('modeNexus').className = operatingMode === 'NEXUS' ? 'primary' : 'secondary';
-    $('modeStandalone').className = operatingMode === 'STANDALONE' ? 'primary' : 'secondary';
-    $('modeStatus').textContent = operatingMode;
-    $('modeNote').textContent = operatingMode === 'NEXUS'
-      ? 'NEXUS mode will return the finished ARC record to the NEXUS host. Testing and local saving still do not depend on internet access.'
-      : 'Standalone mode runs and stores tests locally. Internet access is not required during testing.';
-    renderCompletedTests();
-  }
-
-  function markCustom() { planType = 'CUSTOM'; $('planType').textContent = 'CUSTOM'; }
-  function loadStandard() { planType = 'STANDARD'; draftTests = window.NEXUSTiltTemplates.cloneTests('STANDARD'); $('planType').textContent = 'STANDARD'; renderDraftTests(); }
-
-  function renderDraftTests() {
-    const wrap = $('planTests'); wrap.innerHTML = '';
-    draftTests.forEach((test, index) => {
-      const row = document.createElement('div'); row.className = 'test-row';
-      row.innerHTML = `<strong>${index + 1}</strong><div><span class="small muted">${escapeHtml(test.group || 'Custom')}</span><input aria-label="Test ${index + 1}" value="${escapeHtml(test.label)}"></div><button type="button" class="secondary">REMOVE</button>`;
-      const input = row.querySelector('input'); const remove = row.querySelector('button');
-      input.addEventListener('input', () => { test.label = input.value.trim(); test.from = ''; test.to = ''; test.group = test.group || 'Custom'; markCustom(); });
-      remove.addEventListener('click', () => { draftTests.splice(index, 1); markCustom(); renderDraftTests(); });
-      wrap.appendChild(row);
-    });
-  }
-
-  async function savePlan() {
-    const equipmentName = $('equipmentName').value.trim();
-    const name = $('planName').value.trim() || 'TILT Test Plan';
-    const cleanTests = draftTests.map((t, i) => ({ id:t.id || `T${i+1}`, group:t.group || 'Custom', label:(t.label || '').trim(), from:t.from || '', to:t.to || '', expected:t.expected || 'TRANSFORMER_OK', order:i+1 })).filter(t => t.label);
-    if (!cleanTests.length) { alert('Add at least one test point before saving.'); return; }
-    const plan = { format:'ARC-TILT-PLAN-1', planId:makePlanId(), name, equipmentName, projectId:'', equipmentId:'', templateId:'STANDARD', planType, operatingMode, createdAt:new Date().toISOString(), status:'PLANNED', tests:cleanTests };
-    window.NEXUSTiltStore.savePlan(plan);
-    if (window.NEXUSTiltDB) await window.NEXUSTiltDB.savePlan(plan);
-    refreshSavedPlans(plan.planId);
-    $('completedStatus').className = 'status good'; $('completedStatus').textContent = `Test plan saved with ${cleanTests.length} required points.`;
-  }
-
-  function refreshSavedPlans(selectId) {
-    const plans = window.NEXUSTiltStore.listPlans(); const select = $('savedPlans'); select.innerHTML = '';
-    if (!plans.length) { const option=document.createElement('option'); option.value=''; option.textContent='No saved plans'; select.appendChild(option); $('startTest').disabled=true; return; }
-    plans.forEach(plan => { const option=document.createElement('option'); option.value=plan.planId; option.textContent=`${plan.equipmentName ? plan.equipmentName + ' — ' : ''}${plan.name} (${plan.tests.length} tests)`; select.appendChild(option); });
-    $('startTest').disabled=false; if (selectId) select.value=selectId;
-  }
-
-  function startSelectedPlan() {
-    const plan = window.NEXUSTiltStore.getPlan($('savedPlans').value); if (!plan) return;
-    currentRunStartedAt = new Date().toISOString(); engine.loadPlan(plan); engine.start(); $('endTest').disabled=false;
-  }
-
-  function renderRunState(state) {
-    const status=$('runStatus'), current=$('currentTest'), panel=$('candidatePanel');
-    if (state.status==='IDLE') { status.className='status'; status.textContent='No test running.'; current.textContent='—'; panel.hidden=true; $('endTest').disabled=true; }
-    else if (state.status==='READY') { status.className='status'; status.textContent='Plan loaded.'; }
-    else if (state.status==='WAITING') { status.className='status warn'; status.textContent='Perform the displayed test point. ARC is waiting for a valid reading.'; current.textContent=state.currentTest?.label || '—'; panel.hidden=true; $('endTest').disabled=false; }
-    else if (state.status==='REVIEW') { status.className='status'; status.textContent='Reading detected. Accept it or Reject it.'; current.textContent=state.currentTest?.label || '—'; panel.hidden=false; $('endTest').disabled=false; }
-    else if (state.status==='COMPLETE') { current.textContent='COMPLETE'; panel.hidden=true; $('endTest').disabled=true; }
-    renderRunList(state);
-  }
-
-  function renderCandidate(candidate) {
-    const box=$('candidateResult'); box.className='status';
-    box.innerHTML=`<strong>${escapeHtml(candidate.observedIndication)}</strong><br><span class="small">Detected ${new Date(candidate.detectedAt).toLocaleTimeString()} · Cadence valid · Confidence ${(candidate.deviceEvent.signalConfidence*100).toFixed(0)}%</span>`;
-  }
-
-  function renderRunList(state) {
-    const wrap=$('runList'); wrap.innerHTML=''; if (!state.plan) return;
-    state.plan.tests.forEach((test,index)=>{ const accepted=state.accepted.find(r=>r.testId===test.id); const row=document.createElement('div'); row.className='test-row'; if(accepted)row.classList.add('done'); if(index===state.currentIndex&&state.status!=='COMPLETE')row.classList.add('current'); row.innerHTML=`<strong>${index+1}</strong><span>${escapeHtml(test.label)}</span><span class="pill">${accepted ? escapeHtml(accepted.reading) : index===state.currentIndex&&state.status!=='COMPLETE' ? 'CURRENT' : 'WAITING'}</span>`; wrap.appendChild(row); });
-  }
-
-  function handleDeviceEvent(evt) {
-    const result=engine.receiveDeviceEvent(evt);
-    if(!result.accepted&&result.reason==='NOT_WAITING'){ $('runStatus').className='status warn'; $('runStatus').textContent='Open a test or resolve the current Accept/Reject decision first.'; }
-    else if(!result.accepted&&result.reason==='INVALID_EVENT'){ $('runStatus').className='status warn'; $('runStatus').textContent='Ignored: light event did not contain a valid TILT cadence.'; }
-  }
-
-  function emitSim(channel){ window.NEXUSTiltSimulator.emit(channel,handleDeviceEvent); }
-  function emitBadCadence(){ window.NEXUSTiltSimulator.emitBadCadence(handleDeviceEvent); }
-
-  function renderBleStatus(info) {
-    const status=$('bleStatus'), deviceName=$('bleDeviceName'), connected=info.state==='CONNECTED';
-    status.className=info.state==='CONNECTING'?'status warn':connected?'status good':'status';
-    status.textContent=info.message || 'ARC device not connected.'; deviceName.textContent=connected?(info.deviceName||'ARC DEVICE'):'NO DEVICE'; $('connectBle').disabled=connected||!ble.supported; $('disconnectBle').disabled=!connected;
-  }
-
-  async function connectBle(){ try{await ble.connect();}catch(error){if(error?.name==='NotFoundError'){$('bleStatus').className='status';$('bleStatus').textContent='Device selection canceled.';}} }
-
-  function renderCompletionStatus(info){ const box=$('completedStatus'); box.className=info.state==='LOCAL'||info.state==='DELIVERED'?'status good':info.state==='PENDING'?'status warn':'status'; box.textContent=info.message||'ARC test record saved.'; }
-
-  function renderCompletedTests() {
-    const wrap=$('completedTests'), tests=window.NEXUSTiltStore.listCompletedTests(); wrap.innerHTML='';
-    if(!tests.length){wrap.innerHTML='<p class="muted">No ARC test records saved yet.</p>';return;}
-    tests.slice(0,25).forEach(test=>{ const div=document.createElement('div'); div.className='record'; const endText=test.testEnd?.endedByTester?`Ended by tester: ${test.testEnd.reason}`:'Test sequence completed'; div.innerHTML=`<strong>${escapeHtml(test.equipmentName||test.planName)}</strong><br><span>${test.acceptedReadingCount ?? test.readings?.length ?? 0} accepted reading(s) · ${new Date(test.completedAt).toLocaleString()}</span><br><span class="small muted">${escapeHtml(endText)}</span>`; if(test.mode==='STANDALONE'){const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='SAVE TEST FILE';button.style.marginTop='8px';button.addEventListener('click',()=>recordAdapter.exportStandalone(test.completedTestId));div.appendChild(button);} wrap.appendChild(div); });
-  }
-
-  function openEndTest(){ if(!engine.plan||engine.status==='COMPLETE'||engine.status==='IDLE')return; $('endTestPanel').hidden=false; $('endTestReason').focus(); }
-  function cancelEndTest(){ $('endTestPanel').hidden=true; $('endTestReason').value=''; }
-  function confirmEndTest(){ const reason=$('endTestReason').value.trim(); if(!reason){alert('Enter a reason for ending the test.');return;} try{engine.endTest({reason,technicianName:$('technicianName').value.trim()||'POC User'}); $('endTestReason').value='';}catch(error){alert(error.message);} }
-
-  $('modeNexus').addEventListener('click',()=>setOperatingMode('NEXUS'));
-  $('modeStandalone').addEventListener('click',()=>setOperatingMode('STANDALONE'));
-  $('loadStandard').addEventListener('click',loadStandard);
-  $('addTest').addEventListener('click',()=>{markCustom();draftTests.push({id:`T${Date.now()}`,group:'Custom',label:'New test point',expected:'TRANSFORMER_OK'});renderDraftTests();});
-  $('savePlan').addEventListener('click',savePlan);
-  $('startTest').addEventListener('click',startSelectedPlan);
-  $('acceptResult').addEventListener('click',()=>engine.accept({technicianName:$('technicianName').value.trim()||'POC User'}));
-  $('rejectResult').addEventListener('click',()=>engine.reject());
-  $('endTest').addEventListener('click',openEndTest);
-  $('confirmEndTest').addEventListener('click',confirmEndTest);
-  $('cancelEndTest').addEventListener('click',cancelEndTest);
-  $('simOpen').addEventListener('click',()=>emitSim(window.NEXUSTiltProtocol.CHANNELS.OPEN));
-  $('simShort').addEventListener('click',()=>emitSim(window.NEXUSTiltProtocol.CHANNELS.SHORT));
-  $('simOk').addEventListener('click',()=>emitSim(window.NEXUSTiltProtocol.CHANNELS.OK));
-  $('simBad').addEventListener('click',emitBadCadence);
-  $('connectBle').addEventListener('click',connectBle);
-  $('disconnectBle').addEventListener('click',()=>ble.disconnect());
-
-  if(!ble.supported){$('connectBle').disabled=true;$('bleSupportNote').textContent='This browser does not support direct Web Bluetooth. The simulator can still be used for development; iPad deployment will use the native BLE bridge.';}
-
-  setOperatingMode('STANDALONE');
-  renderDraftTests(); refreshSavedPlans(); renderCompletedTests(); renderBleStatus({state:'DISCONNECTED',message:'ARC device not connected.'});
+  let planType='STANDARD', draftTests=window.NEXUSTiltTemplates.cloneTests('STANDARD'), operatingMode='STANDALONE', currentRunStartedAt='', editingPlanId='';
+  const clone=v=>structuredClone(v), esc=v=>String(v??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+  const recordAdapter=new window.NEXUSTiltRecordAdapter({store:window.NEXUSTiltStore,onStatus:renderCompletionStatus}); recordAdapter.setMode(operatingMode);
+  const engine=new window.NEXUSTiltEngine({onStateChange:s=>{renderRunState(s);if(s.runId&&s.plan&&s.status!=='COMPLETE'&&window.NEXUSTiltDB)window.NEXUSTiltDB.saveRun(engine.snapshot()).catch(console.error);},onCandidate:renderCandidate,onAccepted:r=>{window.NEXUSTiltStore.saveRecord(r);if(window.NEXUSTiltDB)window.NEXUSTiltDB.saveRecord(r).catch(console.error);},onComplete:async summary=>{ $('runStatus').className='status good';$('runStatus').textContent=summary.testEnd?.endedByTester?`TEST ENDED BY TESTER — ${summary.records.length} accepted reading(s) recorded.`:`TEST SEQUENCE COMPLETE — ${summary.records.length} accepted reading(s) recorded.`;try{await recordAdapter.finalize(summary,{technicianName:$('technicianName').value.trim()||'POC User',startedAt:currentRunStartedAt});if(window.NEXUSTiltDB&&summary.runId)await window.NEXUSTiltDB.removeRun(summary.runId);}catch(e){$('completedStatus').className='status bad';$('completedStatus').textContent=e?.message||'ARC test record could not be finalized.';}$('endTestPanel').hidden=true;$('endTest').disabled=true;renderCompletedTests();window.dispatchEvent(new Event('arc-records-changed'));}});
+  const ble=new window.NEXUSTiltBLEBridge({onEvent:handleDeviceEvent,onStatus:renderBleStatus,onError:e=>{$('bleStatus').className='status bad';$('bleStatus').textContent=e?.message||'BLE connection error.';}});
+  const makePlanId=()=>`PLAN-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+  function setOperatingMode(){operatingMode='STANDALONE';recordAdapter.setMode(operatingMode);$('modeStandalone').className='primary';$('modeStatus').textContent='STANDALONE';}
+  function setBuilderBadge(){ $('planType').textContent=editingPlanId?'EDITING COPY':planType; }
+  function markCustom(){planType='CUSTOM';setBuilderBadge();}
+  function loadStandard(){editingPlanId='';planType='STANDARD';draftTests=window.NEXUSTiltTemplates.cloneTests('STANDARD');$('planName').value='Standard TILT Test';$('equipmentName').value='';$('projectName').value='';setBuilderBadge();renderDraftTests();}
+  function moveTest(i,d){const n=i+d;if(n<0||n>=draftTests.length)return;[draftTests[i],draftTests[n]]=[draftTests[n],draftTests[i]];markCustom();renderDraftTests();}
+  function renderDraftTests(){const w=$('planTests');w.innerHTML='';draftTests.forEach((t,i)=>{const r=document.createElement('div');r.className='test-row builder-row';r.innerHTML=`<strong>${i+1}</strong><div><span class="small muted">${esc(t.group||'Custom')}</span><input aria-label="Test ${i+1}" value="${esc(t.label)}"></div><div class="row builder-actions"><button type="button" class="secondary up" ${i===0?'disabled':''}>↑</button><button type="button" class="secondary down" ${i===draftTests.length-1?'disabled':''}>↓</button><button type="button" class="secondary remove">REMOVE</button></div>`;r.querySelector('input').addEventListener('input',e=>{t.label=e.target.value;t.from='';t.to='';t.group=t.group||'Custom';markCustom();});r.querySelector('.up').addEventListener('click',()=>moveTest(i,-1));r.querySelector('.down').addEventListener('click',()=>moveTest(i,1));r.querySelector('.remove').addEventListener('click',()=>{draftTests.splice(i,1);markCustom();renderDraftTests();});w.appendChild(r);});}
+  function cleanDraft(){return draftTests.map((t,i)=>({id:`T${i+1}`,group:t.group||'Custom',label:(t.label||'').trim(),from:t.from||'',to:t.to||'',expected:t.expected||'TRANSFORMER_OK',order:i+1})).filter(t=>t.label);}
+  async function savePlan(){const tests=cleanDraft();if(!tests.length){alert('Add at least one test point before saving.');return;}const now=new Date().toISOString(),source=editingPlanId?window.NEXUSTiltStore.getPlan(editingPlanId):null;const plan={format:'ARC-TILT-PLAN-2',planId:makePlanId(),name:$('planName').value.trim()||'TILT Test Plan',equipmentName:$('equipmentName').value.trim(),projectName:$('projectName').value.trim(),projectId:'',equipmentId:'',templateId:source?.templateId||'STANDARD',planType:planType==='STANDARD'?'STANDARD_COPY':'CUSTOM',sourcePlanId:source?.planId||'',version:(source?.version||0)+1,operatingMode:'STANDALONE',createdAt:now,status:'PLANNED',tests};window.NEXUSTiltStore.savePlan(plan);if(window.NEXUSTiltDB)await window.NEXUSTiltDB.savePlan(plan);editingPlanId=plan.planId;planType='CUSTOM';refreshSavedPlans(plan.planId);setBuilderBadge();$('completedStatus').className='status good';$('completedStatus').textContent=`Saved ${plan.name} v${plan.version} with ${tests.length} test points. Previous versions were preserved.`;}
+  function refreshSavedPlans(id){const ps=window.NEXUSTiltStore.listPlans(),s=$('savedPlans');s.innerHTML='';if(!ps.length){s.innerHTML='<option value="">No saved plans</option>';$('startTest').disabled=true;return;}ps.forEach(p=>{const o=document.createElement('option');o.value=p.planId;o.textContent=`${p.equipmentName?p.equipmentName+' — ':''}${p.name} v${p.version||1} (${p.tests.length} tests)`;s.appendChild(o);});$('startTest').disabled=false;if(id)s.value=id;}
+  function loadPlanForEditing(){const p=window.NEXUSTiltStore.getPlan($('savedPlans').value);if(!p)return;editingPlanId=p.planId;planType='CUSTOM';draftTests=clone(p.tests||[]);$('planName').value=p.name||'';$('equipmentName').value=p.equipmentName||'';$('projectName').value=p.projectName||'';setBuilderBadge();renderDraftTests();$('completedStatus').className='status';$('completedStatus').textContent=`Loaded ${p.name} v${p.version||1}. Saving creates a new version; this saved plan will not be overwritten.`;window.scrollTo({top:document.querySelector('.main-grid').offsetTop-90,behavior:'smooth'});}
+  async function duplicatePlan(){const p=window.NEXUSTiltStore.getPlan($('savedPlans').value);if(!p)return;const c=clone(p);c.planId=makePlanId();c.sourcePlanId=p.planId;c.version=1;c.name=`${p.name} — Copy`;c.createdAt=new Date().toISOString();c.planType='CUSTOM';window.NEXUSTiltStore.savePlan(c);if(window.NEXUSTiltDB)await window.NEXUSTiltDB.savePlan(c);refreshSavedPlans(c.planId);}
+  function startSelectedPlan(){const p=window.NEXUSTiltStore.getPlan($('savedPlans').value);if(!p)return;currentRunStartedAt=new Date().toISOString();engine.loadPlan(p);engine.start();$('endTest').disabled=false;}
+  function renderRunState(s){const st=$('runStatus'),cur=$('currentTest'),pan=$('candidatePanel');$('runCounter').textContent=s.plan&&s.status!=='COMPLETE'?`${Math.min(s.currentIndex+1,s.plan.tests.length)} / ${s.plan.tests.length}`:s.status==='COMPLETE'?'COMPLETE':'NOT STARTED';if(s.status==='IDLE'){st.className='status';st.textContent='No test running.';cur.textContent='—';pan.hidden=true;$('endTest').disabled=true;}else if(s.status==='WAITING'){st.className='status warn';st.textContent='Perform the displayed test point. ARC is waiting for a valid reading.';cur.textContent=s.currentTest?.label||'—';pan.hidden=true;$('endTest').disabled=false;}else if(s.status==='REVIEW'){st.className='status';st.textContent='Reading detected. Accept it or Reject / Retest.';cur.textContent=s.currentTest?.label||'—';pan.hidden=false;}else if(s.status==='COMPLETE'){cur.textContent='COMPLETE';pan.hidden=true;$('endTest').disabled=true;}renderRunList(s);}
+  function renderCandidate(c){$('candidateResult').innerHTML=`<strong>${esc(c.observedIndication)}</strong><br><span class="small">Detected ${new Date(c.detectedAt).toLocaleTimeString()} · Cadence valid · Confidence ${(c.deviceEvent.signalConfidence*100).toFixed(0)}%</span>`;}
+  function renderRunList(s){const w=$('runList');w.innerHTML='';if(!s.plan)return;s.plan.tests.forEach((t,i)=>{const a=s.accepted.find(r=>r.testId===t.id),r=document.createElement('div');r.className='test-row';if(a)r.classList.add('done');if(i===s.currentIndex&&s.status!=='COMPLETE')r.classList.add('current');r.innerHTML=`<strong>${i+1}</strong><span>${esc(t.label)}</span><span class="pill">${a?esc(a.reading):i===s.currentIndex&&s.status!=='COMPLETE'?'CURRENT':'WAITING'}</span>`;w.appendChild(r);});}
+  function handleDeviceEvent(e){const r=engine.receiveDeviceEvent(e);if(!r.accepted&&r.reason==='NOT_WAITING'){$('runStatus').className='status warn';$('runStatus').textContent='Resolve the current Accept / Reject decision first.';}else if(!r.accepted&&r.reason==='INVALID_EVENT'){$('runStatus').className='status warn';$('runStatus').textContent='Ignored: invalid TILT cadence.';}}
+  function renderBleStatus(i){const c=i.state==='CONNECTED';$('bleStatus').className=i.state==='CONNECTING'?'status warn':c?'status good':'status';$('bleStatus').textContent=i.message||'ARC device not connected.';$('bleDeviceName').textContent=c?(i.deviceName||'ARC DEVICE'):'NO DEVICE';$('connectBle').disabled=c||!ble.supported;$('disconnectBle').disabled=!c;}
+  async function connectBle(){try{await ble.connect();}catch(e){if(e?.name==='NotFoundError')$('bleStatus').textContent='Device selection canceled.';}}
+  function renderCompletionStatus(i){$('completedStatus').className=i.state==='LOCAL'||i.state==='DELIVERED'?'status good':'status';$('completedStatus').textContent=i.message||'ARC test record saved.';}
+  function renderCompletedTests(){window.dispatchEvent(new Event('arc-records-changed'));}
+  function openEndTest(){if(!engine.plan||['COMPLETE','IDLE'].includes(engine.status))return;$('endTestPanel').hidden=false;$('endTestReason').focus();}
+  function confirmEndTest(){const reason=$('endTestReason').value.trim();if(!reason){alert('Enter a reason for ending the test.');return;}engine.endTest({reason,technicianName:$('technicianName').value.trim()||'POC User'});$('endTestReason').value='';}
+  $('modeStandalone').addEventListener('click',setOperatingMode);$('loadStandard').addEventListener('click',loadStandard);$('addTest').addEventListener('click',()=>{markCustom();draftTests.push({id:`T${Date.now()}`,group:'Custom',label:'New test point',expected:'TRANSFORMER_OK'});renderDraftTests();});$('savePlan').addEventListener('click',savePlan);$('loadSavedPlan').addEventListener('click',loadPlanForEditing);$('duplicatePlan').addEventListener('click',duplicatePlan);$('startTest').addEventListener('click',startSelectedPlan);$('acceptResult').addEventListener('click',()=>engine.accept({technicianName:$('technicianName').value.trim()||'POC User'}));$('rejectResult').addEventListener('click',()=>engine.reject());$('endTest').addEventListener('click',openEndTest);$('confirmEndTest').addEventListener('click',confirmEndTest);$('cancelEndTest').addEventListener('click',()=>{$('endTestPanel').hidden=true;$('endTestReason').value='';});$('simOpen').addEventListener('click',()=>window.NEXUSTiltSimulator.emit(window.NEXUSTiltProtocol.CHANNELS.OPEN,handleDeviceEvent));$('simShort').addEventListener('click',()=>window.NEXUSTiltSimulator.emit(window.NEXUSTiltProtocol.CHANNELS.SHORT,handleDeviceEvent));$('simOk').addEventListener('click',()=>window.NEXUSTiltSimulator.emit(window.NEXUSTiltProtocol.CHANNELS.OK,handleDeviceEvent));$('simBad').addEventListener('click',()=>window.NEXUSTiltSimulator.emitBadCadence(handleDeviceEvent));$('connectBle').addEventListener('click',connectBle);$('disconnectBle').addEventListener('click',()=>ble.disconnect());
+  if(!ble.supported){$('connectBle').disabled=true;$('bleSupportNote').textContent='Direct Web Bluetooth is unavailable in this browser. The simulator remains available; iPad deployment will use the ARC native BLE bridge.';}
+  setOperatingMode();renderDraftTests();refreshSavedPlans();renderBleStatus({state:'DISCONNECTED',message:'ARC device not connected.'});
 })();
