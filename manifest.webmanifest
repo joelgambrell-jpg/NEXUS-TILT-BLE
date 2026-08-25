@@ -1,0 +1,19 @@
+{
+  "name": "ARC Systems Field Test",
+  "short_name": "ARC",
+  "description": "ARC Systems offline-first field testing and test record capture.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "assets/arc-header.svg?v=13",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
