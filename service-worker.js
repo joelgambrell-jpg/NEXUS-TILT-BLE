@@ -1,4 +1,4 @@
-const CACHE_NAME='arc-tilt-poc-v40';
+const CACHE_NAME='arc-tilt-poc-v41';
 const APP_SHELL=[
   './','./index.html','./manifest.webmanifest?v=40',
   './css/tilt.css?v=40','./css/field.css?v=40','./css/arc40.css?v=40',
