@@ -22,7 +22,7 @@ window.NEXUSTiltProtocol = Object.freeze({
       pulseCount: 3,
       durationMs: 1500,
       signalConfidence: 0.99,
-      batteryPct: 100,
+      batteryPct: null,
       sequence: Date.now(),
       detectedAt: new Date().toISOString(),
       source: 'SIMULATOR'
@@ -31,7 +31,7 @@ window.NEXUSTiltProtocol = Object.freeze({
 
   normalizeEvent(evt, source = 'BLE') {
     if (!evt || typeof evt !== 'object') return null;
-
+    const rawBattery = evt.batteryPct;
     return {
       protocol: evt.protocol || this.PROTOCOL,
       deviceType: evt.deviceType || this.DEVICE_TYPE,
@@ -44,8 +44,8 @@ window.NEXUSTiltProtocol = Object.freeze({
       pulseCount: Number(evt.pulseCount ?? 0),
       durationMs: Number(evt.durationMs ?? 0),
       signalConfidence: Number(evt.signalConfidence ?? 0),
-      batteryPct: Number(evt.batteryPct ?? 0),
-      sequence: Number(evt.sequence ?? Date.now()),
+      batteryPct: rawBattery == null ? null : Number(rawBattery),
+      sequence: Number(evt.sequence ?? evt.eventSequence ?? Date.now()),
       detectedAt: evt.detectedAt || new Date().toISOString(),
       source: evt.source || source
     };
@@ -61,7 +61,7 @@ window.NEXUSTiltProtocol = Object.freeze({
     if (!Number.isFinite(evt.pulseCount) || evt.pulseCount < 1) return false;
     if (!Number.isFinite(evt.durationMs) || evt.durationMs <= 0) return false;
     if (!Number.isFinite(evt.signalConfidence) || evt.signalConfidence < 0 || evt.signalConfidence > 1) return false;
-    if (!Number.isFinite(evt.batteryPct) || evt.batteryPct < 0 || evt.batteryPct > 100) return false;
+    if (evt.batteryPct != null && (!Number.isFinite(evt.batteryPct) || evt.batteryPct < 0 || evt.batteryPct > 100)) return false;
     return true;
   }
 });
