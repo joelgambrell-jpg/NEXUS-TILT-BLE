@@ -7,10 +7,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="ARC">
   <title>ARC Systems TILT POC</title>
-  <link rel="manifest" href="manifest.webmanifest?v=40">
-  <link rel="stylesheet" href="css/tilt.css?v=40">
-  <link rel="stylesheet" href="css/field.css?v=40">
-  <link rel="stylesheet" href="css/arc40.css?v=40">
+  <link rel="manifest" href="manifest.webmanifest?v=42">
+  <link rel="stylesheet" href="css/tilt.css?v=42">
+  <link rel="stylesheet" href="css/field.css?v=42">
+  <link rel="stylesheet" href="css/arc40.css?v=42">
 </head>
 <body>
 <header class="topbar">
@@ -23,7 +23,7 @@
   </div>
   <div class="topbar-status">
     <div class="mode-box"><span>MODE</span><strong>STANDALONE</strong></div>
-    <div class="device-summary"><span class="bt-mark">⌁</span><div><strong id="bleDeviceName">NO DEVICE</strong><small>ARC Device</small></div></div>
+    <div class="device-summary"><span class="bt-mark">⌁</span><div><strong id="bleDeviceName">NO DEVICE</strong><small>PECKER / ARC Device</small></div></div>
   </div>
 </header>
 
@@ -44,9 +44,9 @@
     </section>
     <section class="card">
       <h2>DEVICE CONNECTION</h2>
-      <div id="bleStatus" class="status">No ARC device connected.</div>
-      <div class="row"><button id="connectBle" class="primary">CONNECT ARC DEVICE</button><button id="disconnectBle" class="secondary">DISCONNECT</button></div>
-      <p class="muted">The ARC retrofit device is recorded separately from the calibrated test instrument.</p>
+      <div id="bleStatus" class="status">No PECKER or ARC device connected.</div>
+      <div class="row"><button id="connectBle" class="primary">CONNECT PECKER / ARC DEVICE</button><button id="disconnectBle" class="secondary">DISCONNECT</button></div>
+      <p class="muted">The connected PECKER / ARC device is recorded separately from the calibrated test instrument.</p>
     </section>
   </div>
 
@@ -102,7 +102,7 @@
           <div><span>Equipment Type</span><strong id="liveEquipmentType">—</strong></div>
           <div><span>Tester</span><strong id="liveTester">—</strong></div>
           <div><span>Calibration</span><strong id="liveCalibration">—</strong></div>
-          <div><span>ARC Device</span><strong id="liveDevice">NO DEVICE</strong></div>
+          <div><span>PECKER / ARC Device</span><strong id="liveDevice">NO DEVICE</strong></div>
         </div>
 
         <div class="tilt-matrix">
@@ -132,7 +132,7 @@
     <div><span>DATE / TIME</span><strong id="footerTime">—</strong></div>
     <div><span>TESTER</span><strong id="footerUser">—</strong></div>
     <div><span>LOCAL STORAGE</span><strong>LOCAL-FIRST</strong></div>
-    <div><span>APP BUILD</span><strong>ARC 40</strong></div>
+    <div><span>APP BUILD</span><strong>ARC 42</strong></div>
   </footer>
 </main>
 
@@ -150,19 +150,19 @@
   </div>
 </div>
 
-<script src="js/tilt_protocol.js?v=40"></script>
-<script src="js/tilt_templates.js?v=40"></script>
-<script src="js/tilt_store.js?v=40"></script>
-<script src="js/tilt_db.js?v=40"></script>
-<script src="js/tilt_engine.js?v=40"></script>
-<script src="js/arc_device_diagnostics.js?v=40"></script>
-<script src="js/tilt_simulator.js?v=40"></script>
-<script src="js/tilt_ble_bridge.js?v=40"></script>
-<script src="js/tilt_record_adapter.js?v=40"></script>
-<script src="js/app.js?v=40"></script>
-<script src="js/arc_recovery.js?v=40"></script>
+<script src="js/tilt_protocol.js?v=42"></script>
+<script src="js/tilt_templates.js?v=42"></script>
+<script src="js/tilt_store.js?v=42"></script>
+<script src="js/tilt_db.js?v=42"></script>
+<script src="js/tilt_engine.js?v=42"></script>
+<script src="js/arc_device_diagnostics.js?v=42"></script>
+<script src="js/tilt_simulator.js?v=42"></script>
+<script src="js/tilt_ble_bridge.js?v=42"></script>
+<script src="js/tilt_record_adapter.js?v=42"></script>
+<script src="js/app.js?v=42"></script>
+<script src="js/arc_recovery.js?v=42"></script>
 <script>
-  if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=40'));}
+  if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=42'));}
 </script>
 </body>
 </html>
