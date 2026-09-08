@@ -39,6 +39,16 @@ window.NEXUSTiltStore = {
   getCompletedTest(completedTestId) {
     return this.listCompletedTests().find(t => t.completedTestId === completedTestId) || null;
   },
+  deleteCompletedTest(completedTestId) {
+    const id=String(completedTestId||'');
+    if(!id)return false;
+    const before=this.listCompletedTests();
+    const after=before.filter(t=>t.completedTestId!==id);
+    this._write(this.KEYS.completedTests,after);
+    const queue=this._read(this.KEYS.pendingSync).filter(t=>t.completedTestId!==id);
+    this._write(this.KEYS.pendingSync,queue);
+    return after.length!==before.length;
+  },
   queuePendingSync(completed) {
     const queue = this._read(this.KEYS.pendingSync);
     const idx = queue.findIndex(t => t.completedTestId === completed.completedTestId);
