@@ -49,6 +49,10 @@ window.NEXUSTiltDB = (() => {
     saveCompletedTest: test => put('completedTests', test.completedTestId, test),
     listCompletedTests: () => all('completedTests'),
     getCompletedTest: id => get('completedTests', id),
+    deleteCompletedTest: async id => {
+      await remove('completedTests', id);
+      await remove('syncQueue', id);
+    },
     saveRun: run => put('runs', run.runId, run),
     getRun: id => get('runs', id),
     removeRun: id => remove('runs', id),
