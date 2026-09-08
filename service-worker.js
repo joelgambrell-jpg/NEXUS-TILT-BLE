@@ -1,11 +1,11 @@
-const CACHE_NAME='arc-tilt-poc-v41';
+const CACHE_NAME='arc-tilt-poc-v42';
 const APP_SHELL=[
-  './','./index.html','./manifest.webmanifest?v=40',
-  './css/tilt.css?v=40','./css/field.css?v=40','./css/arc40.css?v=40',
+  './','./index.html','./manifest.webmanifest?v=42',
+  './css/tilt.css?v=42','./css/field.css?v=42','./css/arc40.css?v=42',
   './assets/arc-header.svg?v=13',
-  './js/tilt_protocol.js?v=40','./js/tilt_templates.js?v=40','./js/tilt_store.js?v=40','./js/tilt_db.js?v=40',
-  './js/tilt_engine.js?v=40','./js/arc_device_diagnostics.js?v=40','./js/tilt_simulator.js?v=40',
-  './js/tilt_ble_bridge.js?v=40','./js/tilt_record_adapter.js?v=40','./js/app.js?v=40','./js/arc_recovery.js?v=40'
+  './js/tilt_protocol.js?v=42','./js/tilt_templates.js?v=42','./js/tilt_store.js?v=42','./js/tilt_db.js?v=42',
+  './js/tilt_engine.js?v=42','./js/arc_device_diagnostics.js?v=42','./js/tilt_simulator.js?v=42',
+  './js/tilt_ble_bridge.js?v=42','./js/tilt_record_adapter.js?v=42','./js/app.js?v=42','./js/arc_recovery.js?v=42'
 ];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(APP_SHELL)));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))));self.clients.claim();});
