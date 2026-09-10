@@ -63,13 +63,39 @@
     });
   }
 
+  // Completed-record display only: OPEN is a good/GO result, SHORT is NO GO.
+  // This intentionally does not touch the live test controls or live test matrix.
+  function normalizeCompletedRecordColors(){
+    const detail=$('recordDetail');
+    if(!detail||detail.hidden)return;
+    detail.querySelectorAll('.matrix-cell').forEach(cell=>{
+      const text=(cell.textContent||'').toUpperCase();
+      const main=cell.querySelector('strong');
+      if(text.includes('OPEN')){
+        cell.classList.remove('matrix-nogo');
+        cell.classList.add('matrix-go');
+        if(main)main.textContent='GO';
+      }else if(text.includes('SHORT')){
+        cell.classList.remove('matrix-go');
+        cell.classList.add('matrix-nogo');
+        if(main)main.textContent='NO GO';
+      }
+    });
+  }
+
   $('resumeInterrupted')?.addEventListener('click',resume);
   $('abandonInterrupted')?.addEventListener('click',abandon);
   addEventListener('load',()=>{
     setTimeout(discover,250);
     setTimeout(installDeleteButtons,300);
     const records=$('completedTests');
-    if(records)new MutationObserver(installDeleteButtons).observe(records,{childList:true,subtree:true});
+    if(records){
+      new MutationObserver(installDeleteButtons).observe(records,{childList:true,subtree:true});
+      records.addEventListener('click',e=>{
+        if(!e.target.closest('.view-record'))return;
+        setTimeout(normalizeCompletedRecordColors,50);
+      });
+    }
   });
   window.ARCRecovery={discover};
 })();
