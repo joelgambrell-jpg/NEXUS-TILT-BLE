@@ -1,15 +1,20 @@
 # PECKER / ARC Build Notes
 
-Living requirements and development notes for the PECKER tester and ARC web/app interface.
+Living authoritative requirements and development backlog for the PECKER tester and ARC web/app interface.
 
 Last updated: 2026-09-14
 
+## Development Priority
+
+PECKER is the active hardware-development direction. The earlier ARC optical retrofit/TILT bridge remains a valid product path, but retrofit-specific development is paused until PECKER reaches the appropriate maturity. Do not delete or overwrite the legacy retrofit baseline; resume it from `ARC_POC_HARDWARE_BASELINE.md` when needed.
+
+Shared ARC test-engine, record, offline, transport, audit and field-UX work should be designed so it can support both PECKER and future ARC retrofit devices.
+
 ## Product Direction
 
-PECKER is a de-energized electrical verification tool. The field interface must remain extremely simple while ARC records and interprets the detailed electrical data over BLE.
+PECKER is a de-energized electrical verification tool. The field interface must remain extremely simple while ARC records and interprets detailed electrical data over BLE.
 
 Primary target capabilities:
-
 - Continuity testing on panels, conductors, long wire runs, and large equipment.
 - OPEN / PASS identification.
 - SHORT / FAIL identification.
@@ -23,10 +28,9 @@ Primary target capabilities:
 - Discovery-mode testing when no ARC test profile is loaded.
 - All operation limited to verified de-energized equipment.
 
-## Field Controls - Keep This Simple
+## Field Controls
 
 PECKER should have only:
-
 - One TEST button.
 - Green LED.
 - Red LED.
@@ -34,118 +38,136 @@ PECKER should have only:
 - Loud buzzer.
 - Test leads / appropriate adapters.
 
-No equipment-mode button is planned.
-No display is required on PECKER.
-No result should remain latched after the TEST button is released.
+No equipment-mode button is planned. No display is required on PECKER. No result should remain latched after TEST is released.
 
 ### LED / Buzzer Behavior
 
-BLUE SOLID
-- PECKER powered and ready for service.
-- BLE/normal ready state.
+BLUE SOLID: PECKER powered, serviceable and READY. BLE/normal ready state.
 
-BLUE FLASHING
-- TEST button is held and PECKER is actively testing.
+BLUE FLASHING: TEST is held and PECKER is actively testing.
 
-GREEN
-- Valid PASS result for the active test routine.
+GREEN: valid PASS for the active routine.
 
-RED + FAIL TONE
-- FAIL / RETEST required.
-- Inconclusive results are treated as FAIL/RETEST for equipment safety.
-- SHORT is a fail condition.
+RED + FAIL TONE: FAIL / RETEST. Inconclusive is treated as FAIL/RETEST. SHORT is a fail condition.
 
-ALL THREE LEDs + DISTINCT TRANSFORMER TONE
-- TRANSFORMER OK result.
-- The transformer-success tone must be clearly different from the fail/short tone.
+ALL THREE LEDs + DISTINCT TRANSFORMER TONE: TRANSFORMER OK. Tone must be unmistakably different from fail/short tone.
 
-TEST BUTTON RELEASED
-- Green OFF.
-- Red OFF.
-- Buzzer OFF.
-- Blue returns immediately to solid READY.
-- No previous result remains displayed on the physical tester.
-
-ARC may retain the completed measurement/result even though PECKER clears the physical indication.
+TEST RELEASED: green OFF, red OFF, buzzer OFF, blue immediately returns solid READY. ARC may retain the completed result; PECKER does not physically latch it.
 
 ## Operating Modes
 
-PECKER should use software-driven testing. The installer should not select complex electrical modes on the tester.
+### ARC Standardized Test Mode
 
-### 1. ARC Standardized Test Mode
+When ARC loads a profile, that profile determines the allowed sequence, expected results, ranges and tolerances. PECKER must execute the standardized routine rather than substitute Discovery Mode.
 
-When ARC has loaded a test profile, the profile determines the allowed test sequence and expected result.
-
-Examples:
-
-- PANELBOARD / CONTINUITY -> standardized continuity routine.
-- TRANSFORMER -> standardized winding/ratio/inductive verification routine.
-- PT -> standardized PT routine.
-- CT -> standardized CT routine.
-
-The loaded profile may contain expected values from drawings, submittals, supplier paperwork, equipment setup, or engineering configuration.
-
-PECKER should not substitute Discovery Mode for a loaded standardized test. It should run the required approved routine.
-
-### 2. Discovery Mode
-
-When PECKER is powered and no ARC test profile is loaded, PECKER automatically defaults to Discovery Mode.
-
-Discovery Mode should progressively interrogate the de-energized circuit using safe low-energy tests and classify the electrical behavior without requiring a mode button.
-
-Potential discoveries include:
-
-- OPEN.
-- SHORT.
-- Normal continuity / conductor path.
-- Winding-like response.
-- Transformer-like response.
-- CT-like response.
-- PT-like response.
-- Inconclusive -> FAIL / RETEST.
-
-Automatic discovery must not rely on resistance alone. CT windings and other low-resistance inductive devices may resemble a direct short to a conventional meter.
-
-## ARC Website / App Work Required
-
-### Test Setup
-
-Add equipment/test-type selection during test setup. ARC should be able to load the resulting test profile into PECKER automatically.
-
-Initial equipment/test families:
-
+Initial families:
 - Panelboard / continuity.
+- General conductor continuity.
 - Transformer.
 - PT.
 - CT.
-- General / conductor continuity.
 
-Test profiles should eventually include expected electrical values and tolerances from project documentation.
+Profiles may contain expected values from drawings, submittals, supplier paperwork, equipment setup or engineering configuration.
+
+### Discovery Mode
+
+When PECKER is powered with no ARC profile loaded, it automatically defaults to Discovery Mode. No mode button is required.
+
+Discovery progressively interrogates the de-energized circuit using safe low-energy methods and may classify OPEN, SHORT, normal conductor continuity, winding-like response, transformer-like response, CT-like response, PT-like response, or INCONCLUSIVE. Inconclusive is FAIL/RETEST.
+
+Discovery must not rely on resistance alone.
+
+## ARC Website / App Authoritative Backlog
+
+### Test Setup
+
+Support Tester Name, Project Name, Equipment ID, Equipment Type, Test Plan/Profile, calibration/serviceability verification and optional Special Notes.
+
+Add equipment/test-type selection during setup and load the resulting standardized profile into PECKER automatically.
+
+Keep the interface script-driven: ARC presents one required test point/action at a time (for example A-B). The installer should not need to understand raw electrical measurements.
+
+### Instrument Identity / Calibration / Serviceability
+
+The old retrofit architecture treated the calibrated test instrument and ARC retrofit module as separate assets. Preserve that capability for future retrofit work.
+
+For PECKER, PECKER itself becomes the measurement instrument and must have its own stable Device ID, firmware version, hardware revision, calibration/serviceability information and proving history.
+
+Calibration/serviceability evidence should support:
+- Manual Tool/Device ID and calibration information.
+- Calibration date/status where applicable.
+- Photo of calibration/service sticker using phone/iPad/laptop camera where supported.
+- Photo retained as source evidence.
+- Future barcode/QR reading of tool/calibration labels without making barcode capture mandatory.
+- Proving-unit result and timestamp.
+
+Do not fabricate battery, calibration or serviceability information when it is unavailable.
+
+### Scripted Test Execution
+
+Preserve the established ARC execution model:
+1. Show one required test point/action at a time.
+2. Receive a qualified PECKER result/measurement.
+3. Display the installer-facing result simply.
+4. ACCEPT records the result and advances.
+5. REJECT / RETEST remains internal audit evidence and does not clutter the final customer record.
+6. Clearing/retesting an accepted result requires a reason/note; preserve the original event internally.
+7. PAUSE supports work split across sessions and preserves timestamps.
+8. END TEST requires a legitimate user-entered reason and must not invent a PASS/FAIL conclusion.
+9. Normal sequence completion = COMPLETED; user-ended sequence = ENDED.
 
 ### Quick / One-Off Testing
 
-ARC should have a lightweight Quick Test workflow for testing outside a formal project/equipment record.
+Provide a lightweight Quick Test workflow with no full project/equipment setup required. Connect PECKER, observe Discovery Mode or run the appropriate quick operation, display detailed measurements for authorized/advanced users, and allow optional save/export.
 
-Requirements:
+PECKER must still function standalone with ARC disconnected.
 
-- No full equipment setup required.
-- Connect PECKER.
-- Allow a quick test or simply observe PECKER Discovery Mode.
-- Show the detected result and detailed measurements.
-- Allow optional save/export of the result.
+### Customer Record vs Engineering/Audit Record
 
-PECKER must still function standalone when ARC is not connected.
+Keep two presentation layers:
+- Customer-facing completed record: clean final accepted readings, required metadata and completion/end information.
+- Internal engineering/audit data: raw measurements, rejected/retested events, confidence/signature information, diagnostics, reconnect events and other development/troubleshooting evidence.
 
-### Detailed BLE Data
+Do not make the customer record look like a debug log.
 
-The field LEDs remain simple, but ARC should retain detailed test data when available, including fields such as:
+### Offline / Local-First
 
+Primary field platform remains iPad, but ARC must support laptops and phones as well.
+
+Testing must work without internet. Save active test state and records locally first and sync later. Preserve interrupted-test recovery after reload/crash/offline restart. One active test per ARC/PECKER device unless architecture is intentionally revised later.
+
+Maintain durable record sync-queue behavior so temporary network loss does not lose accepted evidence.
+
+### Connection Loss / Recovery
+
+Preserve connection-loss auto-pause/reconnect behavior. Never fabricate a result because BLE was interrupted. Preserve a loaded standardized profile through reasonable reconnect events where safe. Record enough device/event sequencing information to diagnose duplicate, lost or reordered events.
+
+### Completed Records / Output
+
+Preserve/support:
+- Completed test record viewer.
+- Print / Save PDF workflow.
+- Email handoff workflow.
+- Local data export.
+- Optional future NEXUS handoff/integration.
+
+### Field Focus
+
+Maintain a hardened Field Focus experience: minimal text, one action at a time, large touch targets, obvious connection/test state, and no unnecessary engineering data for installers.
+
+Advanced engineering/diagnostic information should be available separately for development, QA and troubleshooting.
+
+## Detailed BLE Data
+
+ARC should retain detailed data when available:
 - Device ID.
 - Firmware version.
+- Hardware revision.
+- Device event sequence number.
 - Test profile ID/version.
 - Operating mode: STANDARDIZED or DISCOVERY.
 - Equipment/test type.
-- Timestamp.
+- Timestamp/session.
 - Result.
 - Raw ADC samples where appropriate.
 - Applied test voltage.
@@ -164,35 +186,21 @@ The field LEDs remain simple, but ARC should retain detailed test data when avai
 - Document-match status.
 - Failure/retest reason.
 - Proving/self-test status.
+- Battery information only when legitimately measured.
 
-Do not expose complex diagnostic values to installers unless needed. ARC should preserve them for QA, engineering, troubleshooting, audit, and future algorithm development.
+## BLE / Cross-Platform Requirement - CRITICAL
 
-## BLE / Cross-Platform Requirement - IMPORTANT
+PECKER BLE must work with Windows laptops, macOS laptops, Android phones/tablets, iPhones and iPads.
 
-PECKER BLE must work with:
+PECKER should expose standards-based BLE GATT services/characteristics so the same firmware can communicate with browser and native clients.
 
-- Windows laptops.
-- macOS laptops.
-- Android phones/tablets.
-- iPhones.
-- iPads.
+Do NOT design ARC around Web Bluetooth as the only transport. Safari/iOS/iPadOS requires a native BLE path. This is a client-platform issue, not a reason to abandon BLE.
 
-The BLE peripheral itself should use normal standards-based BLE GATT services/characteristics so the same PECKER firmware can communicate with both browser-based and native clients.
+### Transport Abstraction
 
-### Browser Limitation
+ARC Test Engine -> ARC Transport Adapter -> Physical ARC/PECKER Device.
 
-Do NOT design ARC around Web Bluetooth as the only BLE transport.
-
-Web Bluetooth works well in supported Chromium environments such as Chrome/Edge on many desktop systems and Chrome on Android, but Safari/iOS/iPadOS does not provide normal Web Bluetooth support. Therefore an ARC page that directly calls `navigator.bluetooth` cannot be the only production connection method if iPads/iPhones are required.
-
-This is a browser/platform limitation, not a reason to change PECKER away from BLE.
-
-### Required ARC BLE Architecture
-
-Create a transport abstraction so the ARC test engine does not care how the BLE connection was established.
-
-Conceptual interface:
-
+Core concepts:
 - connect()
 - disconnect()
 - getStatus()
@@ -201,47 +209,24 @@ Conceptual interface:
 - receiveMeasurementPacket()
 - sendCommand()
 
-Transport implementations:
+Implementations:
+1. WEB_BLUETOOTH for supported Chrome/Edge/Android environments.
+2. NATIVE_BLE for iPhone/iPad through Apple CoreBluetooth using an ARC native wrapper/app. Evaluate Capacitor or equivalent so the existing HTML/CSS/JS interface can be reused.
+3. Optional future USB/serial service/debug transport.
 
-1. WEB_BLUETOOTH
-   - Chrome/Edge desktop where supported.
-   - Chrome Android where supported.
-
-2. NATIVE_BLE
-   - iPhone/iPad using Apple CoreBluetooth through an ARC native wrapper/app.
-   - The preferred production direction is to reuse the existing ARC web UI in a lightweight native shell/bridge rather than rebuilding the entire interface separately.
-   - Capacitor or an equivalent native bridge should be evaluated so the existing HTML/CSS/JS ARC application can call native CoreBluetooth on iOS/iPadOS.
-
-3. Future optional transports
-   - USB/serial service/debug connection if useful.
-   - Other transports may be added without changing test logic.
-
-### Connection Behavior
-
-ARC should:
-
-- Detect which BLE transport is available.
-- Use Web Bluetooth when it is genuinely supported.
-- Use the native BLE bridge on iPhone/iPad.
-- Keep the same PECKER BLE service/characteristic protocol across transports.
-- Clearly show connection state without exposing unnecessary technical details to the installer.
-- Recover cleanly from BLE disconnect/reconnect.
-- Preserve an active standardized test profile through reasonable reconnect events where safe.
-- Never fabricate a test result because BLE was interrupted.
+ARC should detect the available transport, keep the same PECKER GATT protocol across transports, recover cleanly from disconnects, and avoid exposing transport complexity to installers.
 
 ## PECKER BLE Protocol Direction
 
-Current PECKER proof-of-concept UUIDs already used by ARC:
+Current PECKER POC UUIDs:
+- Service: `7a100001-5045-434b-4552-000000000001`
+- Event characteristic: `7a100002-5045-434b-4552-000000000001`
 
-- Service UUID: `7a100001-5045-434b-4552-000000000001`
-- Event characteristic UUID: `7a100002-5045-434b-4552-000000000001`
+Legacy ARC UUID support exists and should not be casually removed; it will matter when retrofit development resumes.
 
-Legacy ARC UUID support currently exists and should not be removed casually while migrating.
+Production protocol should evolve beyond simple text notifications while maintaining development compatibility.
 
-The production protocol should evolve beyond simple text notifications while retaining backward compatibility during development.
-
-Needed command/event concepts:
-
+Needed concepts:
 - HELLO / device capabilities.
 - READY.
 - PROFILE_LOAD.
@@ -255,84 +240,85 @@ Needed command/event concepts:
 - RESULT_FAIL_RETEST.
 - RESULT_TRANSFORMER_OK.
 - CT/PT/transformer detailed measurement packets.
-- TEST_RELEASED / return to READY.
+- TEST_RELEASED / READY.
 - PROVING_TEST_STARTED.
 - PROVING_TEST_RESULT.
 - ERROR / diagnostic code.
 
 ## PECKER Hardware Direction
 
-Current development direction:
-
-- Move from XIAO ESP32-C3 proof-of-concept toward ESP32-S3-class controller for Rev A development.
-- Candidate development controller: Adafruit ESP32-S3 Feather with PSRAM.
-- Keep BLE as a standard BLE GATT peripheral.
-- Controlled approximately 6 V test rail rather than relying solely on 3.3 V GPIO/rail.
+Current direction:
+- ESP32-S3-class controller for Rev A; candidate Adafruit ESP32-S3 Feather with PSRAM.
+- Standards-based BLE GATT peripheral.
+- Controlled approximately 6 V test rail rather than relying solely on 3.3 V.
 - DRV8833-class H-bridge/test driver for reversible/pulsed excitation.
-- ADS1115-class precision ADC for slow high-resolution measurements.
-- Separate faster ADC path for waveform acquisition; exact part not yet frozen.
-- Current-sense amplifier and precision shunts; exact analog stack not yet frozen.
-- Precision op-amp/analog conditioning; exact part not yet frozen.
-- Precision switching/routing network; exact part not yet frozen.
-- Kelvin/4-wire capability for low-resistance CT/winding measurements.
+- ADS1115-class precision ADC for slower high-resolution measurements.
+- Separate faster ADC path for waveform acquisition; exact part not frozen.
+- Current-sense amplifier and precision shunts; exact stack not frozen.
+- Precision op-amp/conditioning; exact part not frozen.
+- Precision switching/routing; exact part not frozen.
+- Kelvin/4-wire capability for low-resistance CT/winding measurement.
 - Strong input/output protection.
 - Improved field TEST button.
-- Louder field buzzer.
+- Louder buzzer.
 - Three LEDs only: green, red, blue.
 
-Do not freeze the fast ADC/current-sense/op-amp/analog-switch component choices until the required electrical measurement ranges are finalized together.
+Do not freeze fast ADC/current-sense/op-amp/analog-switch choices until electrical measurement ranges are finalized together.
 
-## Proving Unit
+## PECKER Proving Unit
 
-Build a dedicated PECKER proving unit alongside development of the next tester.
-
-Purpose:
-
-1. Field confidence check / ready-for-service verification.
-2. Development calibration and repeatable algorithm testing.
-3. Comparison of one PECKER unit to another.
-4. Verification after repair/firmware updates.
+Build a dedicated proving unit alongside PECKER development for field confidence/serviceability checks, development calibration, repeatable algorithm testing, unit-to-unit comparison and verification after repair/firmware updates.
 
 Candidate proving conditions:
-
 - Known OPEN.
 - Known SHORT.
-- Known resistance representing a long conductor run.
+- Known resistance representing long conductor run.
 - Known low-resistance CT-like inductive reference.
 - Known PT/ratio reference.
 - Small characterized transformer reference.
 - Deliberately abnormal/fault reference.
 
-Reference components should be characterized and documented rather than using arbitrary loads.
+References must be characterized/documented, not arbitrary.
 
-Future goal: PECKER should recognize the proving unit and run an automated self-verification sequence, checking items such as:
+Future goal: PECKER recognizes the proving unit and automatically verifies test output voltage, current source/current measurement, precision ADC, waveform channel, OPEN, SHORT, transformer detection, CT path and PT path.
 
-- Test output voltage.
-- Current source/current measurement.
-- Precision ADC.
-- Waveform channel.
-- OPEN detection.
-- SHORT detection.
-- Transformer detection.
-- CT test path.
-- PT test path.
-
-Solid BLUE READY should ultimately represent a serviceable tester, not merely that the microcontroller has power.
+Solid BLUE READY should ultimately mean serviceable/ready, not merely powered.
 
 ## Safety / Test Philosophy
 
 - PECKER is for de-energized equipment only.
-- Add a voltage-presence/pre-test check before enabling active excitation.
-- If external voltage is detected outside the allowed de-energized threshold, block the test and return FAIL/unsafe-to-test behavior.
-- An inconclusive test is not a field PASS; it requires RETEST.
-- Complex classification should use multiple measurements where practical instead of relying on a single resistance value or visual waveform.
+- Add voltage-presence/pre-test check before active excitation.
+- External voltage outside the allowed de-energized threshold blocks testing and produces unsafe-to-test/fail behavior.
+- Inconclusive is RETEST, never field PASS.
+- Use multiple measurements where practical rather than a single resistance value or visual waveform.
 - Transformer/PT/CT verification should compare independent measurements when possible.
-- Do not claim that low-energy de-energized testing proves insulation withstand, thermal performance, protection operation, loaded regulation, or other tests that require different procedures/equipment.
+- Low-energy testing does not prove insulation withstand, thermal performance, protection operation, loaded regulation or other tests requiring different procedures/equipment.
+
+## Legacy ARC Retrofit Track - PAUSED, PRESERVED
+
+The original ARC retrofit concept remains valid and is intentionally preserved for later resumption.
+
+Existing baseline file: `ARC_POC_HARDWARE_BASELINE.md`.
+
+Legacy concepts to preserve include:
+- Strap-on/non-invasive ARC module for an existing calibrated tester.
+- Independent optical sensing of OPEN, SHORT and TRANSFORMER_OK indicators.
+- ALS-PT19 sensor development and per-channel learn/calibrate behavior.
+- Ambient/off/on/pulse/cadence/cross-talk/light-leakage characterization.
+- Qualified optical events rather than web UI interpretation of raw light samples.
+- Separate calibrated instrument identity vs ARC retrofit-device identity.
+- Legacy ARC BLE UUID/event compatibility.
+- Enclosure indexing/alignment requirements.
+
+Do not spend current PECKER development effort rebuilding these pieces unless they are shared infrastructure. Resume the retrofit track from its baseline when PECKER priorities allow.
+
+## Shared Architecture Rule
+
+Where practical, new ARC work should be device-agnostic. Test plans, records, offline storage, audit history, transport abstraction, reconnect handling, customer reports and NEXUS integration should accept device capabilities rather than hard-code PECKER-only assumptions. This allows PECKER and future ARC retrofit devices to use the same ARC platform.
 
 ## Development Principle
 
-The installer experience should remain TILT-simple even as the internal instrument becomes significantly more capable:
-
+Installer experience remains TILT-simple even as the instrument becomes more capable:
 1. Connect leads as instructed.
 2. Hold TEST.
 3. Observe PASS / FAIL / TRANSFORMER OK.
